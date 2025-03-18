@@ -1,21 +1,20 @@
 import uvicorn
-from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect, Request, Depends, HTTPException
+from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
 import json
-import asyncio
 
-# 导入修改后的模块
-from agent import process_message, sessions
+# 导入chat模块
+from src.chat import process_message, sessions, update_global_agent, get_current_agent_config
 
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
 
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 在生产环境中应该使用具体的域名
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,17 +33,18 @@ class MessageResponse(BaseModel):
     responses: List[Dict[str, Any]]
 
 
-class StreamResponse(BaseModel):
-    session_id: str
-    chunk: Dict[str, Any]
+class AgentConfigRequest(BaseModel):
+    model_name: Optional[str] = None
+
+
+
+
 
 
 # API路由
 @app.post("/api/chat", response_model=MessageResponse)
 async def chat(request: MessageRequest):
-    """
-    与智能体进行对话
-    """
+    """与智能体进行对话"""
     # 如果没有提供session_id，则创建一个新的
     session_id = request.session_id or str(uuid.uuid4())
 
@@ -52,13 +52,27 @@ async def chat(request: MessageRequest):
     response = process_message(
         session_id=session_id,
         user_message=request.message,
-        stream=False  # 非流式API调用
+        stream=False,  # 非流式API调用
     )
 
     return {
         "session_id": session_id,
         "responses": response["response_content"]
     }
+
+class AgentConfigResponse(BaseModel):
+    model_name: str
+@app.post("/api/init", response_model=AgentConfigResponse)
+async def initialize_agent(config: AgentConfigRequest):
+    """初始化智能体配置"""
+    # 更新全局智能体
+    update_global_agent(
+        model_name=config.model_name,
+    )
+
+    # 返回当前配置
+    current_config = get_current_agent_config()
+    return current_config
 
 
 # WebSocket路由用于流式响应
@@ -107,9 +121,7 @@ async def chat_stream(websocket: WebSocket):
 
 @app.get("/api/sessions/{session_id}")
 def get_session(session_id: str):
-    """
-    获取指定会话的历史记录
-    """
+    """获取指定会话的历史记录"""
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="会话不存在")
 
@@ -121,13 +133,17 @@ def get_session(session_id: str):
 
 @app.delete("/api/sessions/{session_id}")
 def delete_session(session_id: str):
-    """
-    删除指定的会话
-    """
+    """删除指定的会话"""
     if session_id in sessions:
         del sessions[session_id]
 
     return {"status": "success"}
+
+
+@app.get("/api/config")
+def get_config():
+    """获取当前智能体配置"""
+    return get_current_agent_config()
 
 
 # 健康检查端点
