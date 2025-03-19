@@ -13,6 +13,8 @@ os.environ['OPENAI_BASE_URL'] = base_url
 client = OpenAI(api_key=api_key, base_url=base_url)
 swarm_client = Swarm(client)
 
+
+
 def init_agent(
         model_name: str = 'gpt-4o-mini',
 ):
@@ -21,7 +23,7 @@ def init_agent(
         name='Agent Main',
         model=model_name,
         instructions=f"你是一个乐于助人的智能体。",
-        functions=[],
+        functions=[]
     )
 
 # 智能体定义

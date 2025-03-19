@@ -7,7 +7,7 @@ import uuid
 import json
 
 # 导入chat模块
-from src.chat import process_message, sessions, update_global_agent, get_current_agent_config
+from src.chat import process_message, sessions, update_global_agent, get_current_agent_config, clear_session, get_session_messages
 
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
 
@@ -37,28 +37,56 @@ class AgentConfigRequest(BaseModel):
     model_name: Optional[str] = None
 
 
+class ChatRequest(BaseModel):
+    """聊天请求的数据模型"""
+    message: str
+    session_id: Optional[str] = None
+    stream: Optional[bool] = True
 
 
+class ChatResponse(BaseModel):
+    """聊天响应的数据模型"""
+    response: List[Dict[str, Any]]
+    session_id: str
+
+@app.post("/api/chat")
+def chat(request: ChatRequest):
+    """处理聊天请求"""
+    try:
+        # 确保使用固定的会话ID来保持状态
+        session_id = request.session_id if request.session_id else "default"
+
+        # 调用聊天处理函数
+        response = process_message(
+            session_id=session_id,
+            user_message=request.message,
+            stream=request.stream if hasattr(request, "stream") else True
+        )
+
+        print(response)
+
+        # 返回响应
+        return {
+            "response": next(item['content'] for item in reversed(response['response']) if item['role'] == 'assistant'),
+            "session_id": session_id
+        }
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"处理聊天请求时出错: {str(e)}\n{error_detail}")
+        raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
 
 
-# API路由
-@app.post("/api/chat", response_model=MessageResponse)
-async def chat(request: MessageRequest):
-    """与智能体进行对话"""
-    # 如果没有提供session_id，则创建一个新的
-    session_id = request.session_id or str(uuid.uuid4())
+@app.post("/api/sessions/{session_id}/clear")
+def api_clear_session(session_id: str):
+    """API端点：清除会话"""
+    return clear_session(session_id)
 
-    # 处理消息
-    response = process_message(
-        session_id=session_id,
-        user_message=request.message,
-        stream=False,  # 非流式API调用
-    )
 
-    return {
-        "session_id": session_id,
-        "responses": response["response_content"]
-    }
+@app.get("/api/sessions/{session_id}/messages")
+def api_get_session_messages(session_id: str):
+    """API端点：获取会话消息"""
+    return {"messages": get_session_messages(session_id)}
 
 class AgentConfigResponse(BaseModel):
     model_name: str

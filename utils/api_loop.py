@@ -31,7 +31,7 @@ def run_api_loop(
         messages = []
 
     # 添加用户输入到消息列表
-    messages.append({"role": "user", "content": user_input})
+    # messages.append({"role": "user", "content": user_input})
 
     # 运行Swarm客户端，与智能体交互
     response = client.run(
