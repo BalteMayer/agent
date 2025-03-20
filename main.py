@@ -49,10 +49,19 @@ class ChatResponse(BaseModel):
     response: List[Dict[str, Any]]
     session_id: str
 
+
+# 在现有引入后添加
+from fastapi import Request
+
+
+# 修改现有的聊天API端点
 @app.post("/api/chat")
-def chat(request: ChatRequest):
+def chat(request: ChatRequest, req: Request):
     """处理聊天请求"""
     try:
+        # 获取用户IP或其他标识，优先使用X-Forwarded-For头信息
+        user_id = req.headers.get("X-Forwarded-For", req.client.host)
+
         # 确保使用固定的会话ID来保持状态
         session_id = request.session_id if request.session_id else "default"
 
@@ -60,7 +69,8 @@ def chat(request: ChatRequest):
         response = process_message(
             session_id=session_id,
             user_message=request.message,
-            stream=request.stream if hasattr(request, "stream") else True
+            stream=request.stream if hasattr(request, "stream") else True,
+            user_id=user_id  # 传递用户标识
         )
 
         print(response)
@@ -77,16 +87,20 @@ def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
 
 
+# 修改清除会话API端点
 @app.post("/api/sessions/{session_id}/clear")
-def api_clear_session(session_id: str):
+def api_clear_session(session_id: str, req: Request):
     """API端点：清除会话"""
-    return clear_session(session_id)
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    return clear_session(session_id, user_id)
 
 
+# 修改获取会话消息API端点
 @app.get("/api/sessions/{session_id}/messages")
-def api_get_session_messages(session_id: str):
+def api_get_session_messages(session_id: str, req: Request):
     """API端点：获取会话消息"""
-    return {"messages": get_session_messages(session_id)}
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    return {"messages": get_session_messages(session_id, user_id)}
 
 class AgentConfigResponse(BaseModel):
     model_name: str
@@ -103,7 +117,7 @@ async def initialize_agent(config: AgentConfigRequest):
     return current_config
 
 
-# WebSocket路由用于流式响应
+# 类似地，修改 WebSocket 路由
 @app.websocket("/api/chat/stream")
 async def chat_stream(websocket: WebSocket):
     await websocket.accept()
@@ -118,15 +132,19 @@ async def chat_stream(websocket: WebSocket):
             session_id = request_data.get("session_id") or str(uuid.uuid4())
             message = request_data.get("message", "")
 
+            # 获取用户标识，使用 WebSocket 连接的客户端信息
+            user_id = websocket.client.host
+
             if not message:
                 await websocket.send_json({"error": "消息不能为空"})
                 continue
 
-            # 处理消息(流式)
+            # 处理消息(流式)，传递用户标识
             response = process_message(
                 session_id=session_id,
                 user_message=message,
-                stream=True
+                stream=True,
+                user_id=user_id
             )
 
             # 发送流式响应
@@ -145,7 +163,6 @@ async def chat_stream(websocket: WebSocket):
     except WebSocketDisconnect:
         # 处理WebSocket断开连接
         pass
-
 
 @app.get("/api/sessions/{session_id}")
 def get_session(session_id: str):

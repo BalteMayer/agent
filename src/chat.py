@@ -3,45 +3,49 @@ from agent import agent_main, client
 from utils.memory import ConversationMemory
 import time
 
-memory = {
-    'sessions': {}  # 格式: { 'session_id': [message1, message2, ...] }
-}
+# 创建全局会话记忆实例
+memory_manager = ConversationMemory(nlp_model="zh_core_web_sm", max_history=50)
+
+# 创建一个字典用于存储会话状态
+sessions = {}
 
 
-def get_or_create_session(session_id):
-    """获取或创建会话"""
-    if session_id not in memory['sessions']:
-        memory['sessions'][session_id] = []
+def get_or_create_session(session_id, user_id):
+    """获取或创建会话，使用用户ID和会话ID组合作为唯一标识"""
+    # 创建组合ID，确保不同用户的会话互不干扰
+    combined_id = f"{user_id}:{session_id}"
 
-    return {
-        "agent": agent_main,
-        "last_active": time.time()
-    }
+    if combined_id not in sessions:
+        sessions[combined_id] = {
+            "agent": agent_main,
+            "last_active": time.time(),
+            "user_id": user_id
+        }
+
+    return sessions[combined_id]
 
 
-def process_message(session_id, user_message, stream=True):
+def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     """处理用户消息，返回智能体响应"""
-    session = get_or_create_session(session_id)
-
-    # 获取当前会话的消息历史
-    if session_id not in memory['sessions']:
-        memory['sessions'][session_id] = []
+    # 获取或创建会话，使用用户ID和会话ID组合
+    session = get_or_create_session(session_id, user_id)
+    combined_id = f"{user_id}:{session_id}"
 
     # 添加用户消息到历史
-    memory['sessions'][session_id].append({
-        "role": "user",
-        "content": user_message
-    })
+    memory_manager.add_message(combined_id, "user", user_message)
+
+    # 获取当前会话的消息历史
+    messages = memory_manager.get_messages(combined_id)
 
     # 打印会话历史长度用于调试
-    print(f"会话 {session_id} 历史长度: {len(memory['sessions'][session_id])}")
+    print(f"会话 {combined_id} 历史长度: {len(messages)}")
 
     # 调用API处理消息
     response = run_api_loop(
         openai_client=client,
         starting_agent=session["agent"],
         user_input=None,  # 不添加用户消息，因为已经在messages中
-        messages=memory['sessions'][session_id],  # 使用完整历史
+        messages=messages,  # 使用完整历史
         stream=stream,
     )
 
@@ -55,50 +59,48 @@ def process_message(session_id, user_message, stream=True):
             latest_assistant_message = assistant_messages[-1]
 
             # 添加助手回复到历史记录
-            memory['sessions'][session_id].append({
-                "role": "assistant",
-                "content": latest_assistant_message["content"]
-            })
+            memory_manager.add_message(combined_id, "assistant", latest_assistant_message["content"])
+
+    # 获取更新后的消息列表
+    updated_messages = memory_manager.get_messages(combined_id)
 
     # 返回当前会话的完整消息历史
-    # 注意: 不是返回response["messages"]，而是返回我们自己维护的memory
     return {
-        "response": memory['sessions'][session_id],
+        "response": updated_messages,
         "session_id": session_id
     }
 
 
-def get_session_messages(session_id):
-    """获取会话历史消息"""
-    return memory['sessions'].get(session_id, [])
-
-# 创建一个字典用于存储会话状态
-sessions = {}
-
-def clear_session(session_id):
+def clear_session(session_id, user_id="anonymous"):
     """清除会话记忆"""
-    memory.clear_session(session_id)
-    if session_id in sessions:
-        sessions[session_id] = {
-            "agent": sessions[session_id]["agent"],
+    combined_id = f"{user_id}:{session_id}"
+    memory_manager.clear_session(combined_id)
+
+    if combined_id in sessions:
+        sessions[combined_id] = {
+            "agent": sessions[combined_id]["agent"],
             "created_at": time.time(),
-            "last_active": time.time()
+            "last_active": time.time(),
+            "user_id": user_id
         }
     return {"status": "success"}
 
 
-def get_session_messages(session_id):
+def get_session_messages(session_id, user_id="anonymous"):
     """获取会话历史消息"""
-    return memory.get_messages(session_id)
+    combined_id = f"{user_id}:{session_id}"
+    return memory_manager.get_messages(combined_id)
 
 
 current_agent_config = {
     "model_name": "gpt-4o-mini",
 }
 
+
 def get_current_agent_config():
     """获取当前智能体配置"""
     return current_agent_config
+
 
 def update_global_agent(model_name=None):
     """更新全局智能体配置"""
