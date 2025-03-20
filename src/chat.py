@@ -92,29 +92,35 @@ def get_session_messages(session_id, user_id="anonymous"):
     return memory_manager.get_messages(combined_id)
 
 
+# 修改为与默认agent一致
 current_agent_config = {
-    "model_name": "gpt-4o-mini",
+    "model_name": "gpt-4o",  # 与agent.py中的默认值保持一致
 }
 
 
 def get_current_agent_config():
     """获取当前智能体配置"""
+    # 确保配置反映实际的agent_main的模型
+    global current_agent_config, agent_main
+    current_agent_config["model_name"] = agent_main.model
     return current_agent_config
 
 
 def update_global_agent(model_name=None):
     """更新全局智能体配置"""
-    global agent_main
+    global agent_main, current_agent_config
 
     # 创建新的智能体
     if model_name:
         from agent import init_agent
 
-        if not model_name:
-            model_name = agent_main.model
-            print("model_name: ", model_name)
-
         # 初始化新智能体
         agent_main = init_agent(model_name=model_name)
+
+        # 同步更新配置
+        current_agent_config["model_name"] = model_name
+        print(f"智能体配置已更新: 模型={model_name}")
+    else:
+        print("未提供模型名称，使用当前模型")
 
     return agent_main
