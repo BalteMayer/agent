@@ -4,18 +4,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="init demo">
-      <change afterPath="$PROJECT_DIR$/src/chat_old.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/knowledge_graph.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/memory.py" afterDir="false" />
+    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="memory demo">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/samples/OpenAI swarm多智能体框架快速入门实战(2).ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/samples/hallo.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/chat.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/api_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/api_loop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/loop.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/chat_old.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/knowledge_graph.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,7 +97,7 @@
       <workItem from="1742203611000" duration="9351000" />
       <workItem from="1742267363401" duration="15840000" />
       <workItem from="1742306177554" duration="7654000" />
-      <workItem from="1742362636662" duration="12887000" />
+      <workItem from="1742362636662" duration="14649000" />
     </task>
     <task id="LOCAL-00001" summary="first commmit">
       <option name="closed" value="true" />
@@ -131,7 +123,23 @@
       <option name="project" value="LOCAL" />
       <updated>1742312226151</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="memory demo">
+      <option name="closed" value="true" />
+      <created>1742384862952</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1742384862952</updated>
+    </task>
+    <task id="LOCAL-00005" summary="memory demo">
+      <option name="closed" value="true" />
+      <created>1742384887570</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1742384887570</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -152,7 +160,8 @@
     <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="first commmit" />
     <MESSAGE value="init demo" />
-    <option name="LAST_COMMIT_MESSAGE" value="init demo" />
+    <MESSAGE value="memory demo" />
+    <option name="LAST_COMMIT_MESSAGE" value="memory demo" />
   </component>
   <component name="VgoProject">
     <integration-enabled>false</integration-enabled>
