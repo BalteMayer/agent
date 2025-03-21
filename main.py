@@ -7,7 +7,7 @@ import uuid
 import json
 
 # 导入chat模块
-from src.chat import process_message, sessions, update_global_agent, get_current_agent_config, clear_session, get_session_messages
+from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
 
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
 
@@ -108,7 +108,7 @@ class AgentConfigResponse(BaseModel):
 async def initialize_agent(config: AgentConfigRequest):
     """初始化智能体配置"""
     # 更新全局智能体
-    update_global_agent(
+    update_user_agent(
         model_name=config.model_name,
     )
 
@@ -198,4 +198,4 @@ def health_check():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

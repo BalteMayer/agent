@@ -1,10 +1,13 @@
 from utils.api_loop import run_api_loop
-from agent import agent_main, client
+from agent import init_agent, client
 from utils.memory import ConversationMemory
 import time
 
 # 创建全局会话记忆实例
 memory_manager = ConversationMemory(nlp_model="zh_core_web_sm", max_history=50)
+
+# 在全局变量部分
+user_agents = {}
 
 # 创建一个字典用于存储会话状态
 sessions = {}
@@ -15,9 +18,13 @@ def get_or_create_session(session_id, user_id):
     # 创建组合ID，确保不同用户的会话互不干扰
     combined_id = f"{user_id}:{session_id}"
 
+    # 为每个用户创建独立的agent实例
+    if user_id not in user_agents:
+        user_agents[user_id] = init_agent(model_name='gpt-4o')
+
     if combined_id not in sessions:
         sessions[combined_id] = {
-            "agent": agent_main,
+            "agent": user_agents[user_id],  # 使用用户专属的agent
             "last_active": time.time(),
             "user_id": user_id
         }
@@ -106,21 +113,12 @@ def get_current_agent_config():
     return current_agent_config
 
 
-def update_global_agent(model_name=None):
-    """更新全局智能体配置"""
-    global agent_main, current_agent_config
+def update_user_agent(user_id, model_name=None):
+    """更新特定用户的智能体配置"""
+    global user_agents
 
-    # 创建新的智能体
     if model_name:
-        from agent import init_agent
+        user_agents[user_id] = init_agent(model_name=model_name)
+        print(f"用户 {user_id} 的智能体已更新: 模型={model_name}")
 
-        # 初始化新智能体
-        agent_main = init_agent(model_name=model_name)
-
-        # 同步更新配置
-        current_agent_config["model_name"] = model_name
-        print(f"智能体配置已更新: 模型={model_name}")
-    else:
-        print("未提供模型名称，使用当前模型")
-
-    return agent_main
+    return user_agents[user_id]

@@ -18,15 +18,19 @@ swarm_client = Swarm(client)
 def init_agent(
         model_name: str = 'gpt-4o-mini',
 ):
+
+    print('agent init')
     # 智能体定义
-     return Agent(
+    return Agent(
         name='Agent Main',
         model=model_name,
         instructions=f"你是一个乐于助人的智能体。",
         functions=[]
     )
 
-# 智能体定义
-agent_main = init_agent(model_name = 'gpt-4o')
-# TODO: 新开页面，记忆，functions
-
+if __name__ == '__main__':
+    # 智能体定义
+    agent_main = init_agent(model_name='gpt-4o')
+    # TODO: 新开页面，记忆，functions
+    response = swarm_client.run(agent_main,messages=[{"role":"user","content":"你好"}])
+    print(response)
