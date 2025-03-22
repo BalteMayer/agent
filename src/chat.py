@@ -1,6 +1,8 @@
 from utils.api_loop import run_api_loop
 from agent import init_agent, client
 from utils.memory import ConversationMemory
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import httpx
 import time
 
 # 创建全局会话记忆实例
@@ -32,6 +34,23 @@ def get_or_create_session(session_id, user_id):
     return sessions[combined_id]
 
 
+# 添加重试装饰器，针对网络相关错误进行重试
+@retry(
+    stop=stop_after_attempt(3),  # 最多重试3次
+    wait=wait_exponential(multiplier=1, min=2, max=30),  # 指数退避重试等待
+    retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectTimeout, httpx.ReadTimeout))  # 只对超时错误重试
+)
+def call_api_with_retry(client, agent, messages, stream):
+    """封装API调用的重试逻辑"""
+    return run_api_loop(
+        openai_client=client,
+        starting_agent=agent,
+        user_input=None,
+        messages=messages,
+        stream=stream,
+    )
+
+
 def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     """处理用户消息，返回智能体响应"""
     # 获取或创建会话，使用用户ID和会话ID组合
@@ -47,35 +66,52 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     # 打印会话历史长度用于调试
     print(f"会话 {combined_id} 历史长度: {len(messages)}")
 
-    # 调用API处理消息
-    response = run_api_loop(
-        openai_client=client,
-        starting_agent=session["agent"],
-        user_input=None,  # 不添加用户消息，因为已经在messages中
-        messages=messages,  # 使用完整历史
-        stream=stream,
-    )
+    try:
+        # 使用重试机制调用API处理消息
+        response = call_api_with_retry(
+            client=client,
+            agent=session["agent"],
+            messages=messages,  # 使用完整历史
+            stream=stream,
+        )
 
-    # 从响应中获取最新的助手消息
-    if "messages" in response:
-        assistant_messages = [msg for msg in response["messages"]
-                              if msg.get("role") == "assistant" and msg.get("content")]
+        # 从响应中获取最新的助手消息
+        if "messages" in response:
+            assistant_messages = [msg for msg in response["messages"]
+                                  if msg.get("role") == "assistant" and msg.get("content")]
 
-        if assistant_messages:
-            # 使用最新的助手消息
-            latest_assistant_message = assistant_messages[-1]
+            if assistant_messages:
+                # 使用最新的助手消息
+                latest_assistant_message = assistant_messages[-1]
 
-            # 添加助手回复到历史记录
-            memory_manager.add_message(combined_id, "assistant", latest_assistant_message["content"])
+                # 添加助手回复到历史记录
+                memory_manager.add_message(combined_id, "assistant", latest_assistant_message["content"])
 
-    # 获取更新后的消息列表
-    updated_messages = memory_manager.get_messages(combined_id)
+        # 获取更新后的消息列表
+        updated_messages = memory_manager.get_messages(combined_id)
 
-    # 返回当前会话的完整消息历史
-    return {
-        "response": updated_messages,
-        "session_id": session_id
-    }
+        # 返回当前会话的完整消息历史
+        return {
+            "response": updated_messages,
+            "session_id": session_id,
+            "stream_chunks": response.get("stream_chunks", []) if stream else []
+        }
+    except Exception as e:
+        # 捕获所有异常并返回友好错误消息
+        print(f"API调用失败: {str(e)}")
+        error_message = "抱歉，服务暂时响应超时，请稍后再试..."
+
+        # 添加错误消息到会话历史
+        memory_manager.add_message(combined_id, "assistant", error_message)
+
+        # 获取包含错误消息的历史
+        updated_messages = memory_manager.get_messages(combined_id)
+
+        return {
+            "response": updated_messages,
+            "session_id": session_id,
+            "error": str(e)
+        }
 
 
 def clear_session(session_id, user_id="anonymous"):

@@ -73,18 +73,35 @@ def chat(request: ChatRequest, req: Request):
             user_id=user_id  # 传递用户标识
         )
 
-        print(response)
+        # 检查是否有错误字段
+        if "error" in response:
+            # 返回错误响应，但仍然提供用户友好的信息
+            return {
+                "response": "抱歉，服务暂时响应超时，请稍后再试...",
+                "session_id": session_id,
+                "error": response["error"]
+            }
 
-        # 返回响应
+        # 返回正常响应
         return {
-            "response": next(item['content'] for item in reversed(response['response']) if item['role'] == 'assistant'),
+            "response": next(
+                (item['content'] for item in reversed(response['response']) if item['role'] == 'assistant'), ""),
             "session_id": session_id
         }
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
         print(f"处理聊天请求时出错: {str(e)}\n{error_detail}")
-        raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
+
+        # 提供用户友好的错误信息
+        if "timeout" in str(e).lower():
+            return {
+                "response": "抱歉，服务暂时响应超时，请稍后再试...",
+                "session_id": session_id,
+                "error": str(e)
+            }
+        else:
+            raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
 
 
 # 修改清除会话API端点
