@@ -63,8 +63,9 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     # 获取当前会话的消息历史
     messages = memory_manager.get_messages(combined_id)
 
-    # 打印会话历史长度用于调试
-    print(f"会话 {combined_id} 历史长度: {len(messages)}")
+    # # 打印会话历史长度用于调试
+    # print(f"会话 {combined_id} 历史长度: {len(messages)}")
+    print(messages)
 
     try:
         # 使用重试机制调用API处理消息
