@@ -235,23 +235,23 @@ class ConversationMemory:
                     "content": f"知识图谱: {kg_str}"
                 })
 
-        # 然后添加实体记忆的系统消息
-        if include_entities and session_id in self.entity_memory and self.entity_memory[session_id]:
-            entity_info = "以下是本次对话中提到的重要信息:\n"
-            for entity_key, entity in self.entity_memory[session_id].items():
-                # 只包括被提到多次或有多个上下文的实体
-                if entity["mentions"] > 1 or len(entity["contexts"]) > 1:
-                    entity_info += f"- {entity['text']} ({entity['type']}): 在对话中出现了{entity['mentions']}次\n"
-                    if entity["contexts"]:
-                        for i, context in enumerate(entity["contexts"]):
-                            if i < 3:  # 限制上下文数量
-                                entity_info += f"  - 上下文: \"{context}\"\n"
-
-            if len(entity_info) > len("以下是本次对话中提到的重要信息:\n"):
-                messages.append({
-                    "role": "system",
-                    "content": entity_info
-                })
+        # # 然后添加实体记忆的系统消息
+        # if include_entities and session_id in self.entity_memory and self.entity_memory[session_id]:
+        #     entity_info = "以下是本次对话中提到的重要信息:\n"
+        #     for entity_key, entity in self.entity_memory[session_id].items():
+        #         # 只包括被提到多次或有多个上下文的实体
+        #         if entity["mentions"] > 1 or len(entity["contexts"]) > 1:
+        #             entity_info += f"- {entity['text']} ({entity['type']}): 在对话中出现了{entity['mentions']}次\n"
+        #             if entity["contexts"]:
+        #                 for i, context in enumerate(entity["contexts"]):
+        #                     if i < 3:  # 限制上下文数量
+        #                         entity_info += f"  - 上下文: \"{context}\"\n"
+        #
+        #     if len(entity_info) > len("以下是本次对话中提到的重要信息:\n"):
+        #         messages.append({
+        #             "role": "system",
+        #             "content": entity_info
+        #         })
 
         # 然后添加历史消息
         messages.extend(self.sessions[session_id])
