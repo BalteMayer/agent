@@ -15,6 +15,8 @@ from wordcloud import WordCloud
 import jieba
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.ticker as mticker
+import datetime
+
 
 # 设置中文字体支持
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
@@ -22,8 +24,8 @@ plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
 # 数据库连接配置
 config = {
-    'user': 'your_username',
-    'password': 'your_password',
+    'user': 'BALTE',
+    'password': 'your_new_password',
     'host': 'localhost',
     'database': 'tarsgo',
     'raise_on_warnings': True
@@ -66,7 +68,7 @@ def execute_query(query, params=None):
 
 # ======== 1. 折线图绘制函数 ========
 
-def plot_sign_in_trend(start_date, end_date, save_path=None):
+def plot_sign_in_trend(start_date, end_date):
     """
     绘制一段时间内的每日签到人数趋势折线图
 
@@ -78,6 +80,7 @@ def plot_sign_in_trend(start_date, end_date, save_path=None):
     返回:
         None
     """
+    save_path = f"data/sign_in_trend/sign_in_trend_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
     query = """
     SELECT DATE(signin) as date, COUNT(*) as count
     FROM sign_daytask
@@ -139,9 +142,10 @@ def plot_sign_in_trend(start_date, end_date, save_path=None):
         plt.show()
 
     plt.close()
+    return save_path
 
 
-def plot_member_activity(top_n=10, time_period='month', save_path=None):
+def plot_member_activity(top_n=10, time_period='month'):
     """
     绘制成员活跃度折线图，显示不同时间段内的积累活跃时间
 
@@ -153,6 +157,7 @@ def plot_member_activity(top_n=10, time_period='month', save_path=None):
     返回:
         None
     """
+    save_path = f"data/member_activity/member_activity_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
     # 获取当前日期
     now = datetime.now()
 
@@ -323,11 +328,12 @@ def plot_member_activity(top_n=10, time_period='month', save_path=None):
         plt.show()
 
     plt.close()
+    return save_path
 
 
 # ======== 2. 柱状图绘制函数 ========
 
-def plot_group_member_count(save_path=None):
+def plot_group_member_count():
     """
     绘制各组成员数量柱状图
 
@@ -337,6 +343,7 @@ def plot_group_member_count(save_path=None):
     返回:
         None
     """
+    save_path = f"data/group_member_count/group_member_count_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
     # 查询各组成员数量
     query = """
     SELECT jlugroup, COUNT(*) as count
@@ -389,6 +396,7 @@ def plot_group_member_count(save_path=None):
         plt.show()
 
     plt.close()
+    return save_path
 
 
 def plot_material_consumption(top_n=10, period=None, save_path=None):
@@ -779,7 +787,8 @@ def plot_gender_distribution(table='Data', save_path=None):
     plt.close()
 
 
-def plot_material_category_distribution(save_path=None):
+
+def plot_material_category_distribution():
     """
     绘制物资类别分布饼图
 
@@ -789,6 +798,7 @@ def plot_material_category_distribution(save_path=None):
     返回:
         None
     """
+    save_path = f"data/material_distribution/material_distribution_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
     # 查询物资类别分布
     query = """
     SELECT mc.category, COUNT(ms.ID) as count
@@ -803,7 +813,7 @@ def plot_material_category_distribution(save_path=None):
     if not results:
         print("没有查询到数据")
         return
-
+    
     # 转换为DataFrame
     df = pd.DataFrame(results)
 
@@ -815,8 +825,8 @@ def plot_material_category_distribution(save_path=None):
 
     # 计算突出显示值 - 第一个部分最突出
     explode = np.zeros(len(df))
-    explode[0] = 0.1
-
+    if len(explode) > 10:
+        explode[0] = 0.01
     # 绘制饼图和百分比标签
     wedges, texts, autotexts = plt.pie(
         df['count'],
@@ -825,10 +835,12 @@ def plot_material_category_distribution(save_path=None):
         startangle=90,
         explode=explode,
         colors=colors,
-        shadow=True,
-        textprops={'fontsize': 12}
+        shadow=False,
+        textprops={'fontsize': 12},
+        wedgeprops={'edgecolor': 'white', 'linewidth': 1},  # 添加这一行来移除缝隙
+        center=(0, 0)  # 确保居中对齐
     )
-
+    
     # 设置自动文本标签的样式
     for autotext in autotexts:
         autotext.set_color('white')
@@ -842,7 +854,7 @@ def plot_material_category_distribution(save_path=None):
         x = np.cos(np.deg2rad(angle))
         y = np.sin(np.deg2rad(angle))
         plt.plot([x * 0.8, x * 1.3], [y * 0.8, y * 1.3], 'k-')
-
+    
     # 添加数量标注
     for i, (wedge, count) in enumerate(zip(wedges, df['count'])):
         if df['count'].iloc[i] / df['count'].sum() >= 0.05:  # 只为较大部分添加标注
@@ -850,120 +862,25 @@ def plot_material_category_distribution(save_path=None):
             x = wedge.r * 0.7 * np.cos(np.deg2rad(angle))
             y = wedge.r * 0.7 * np.sin(np.deg2rad(angle))
             plt.text(x, y, f"{int(count)}项", ha='center', va='center', fontsize=10, fontweight='bold', color='white')
-
+    
     # 设置图表属性
     plt.title('物资类别分布', fontsize=16, pad=20)
-
+    
     # 添加图例
     plt.legend(wedges, df['category'], title="物资类别", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
-
+    
     # 添加总计
     total = df['count'].sum()
-    plt.text(0, -1.2, f'总物资项: {total}项', ha='center', font = FontProperties(fname=r"C:\Windows\Fonts\simhei.ttf", size=12))  # Windows系统
-    # 如果是Linux系统，可以使用：
-    # font = FontProperties(fname=r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", size=12)
-    # 如果是MacOS系统，可以使用：
-    # font = FontProperties(fname=r"/System/Library/Fonts/PingFang.ttc", size=12)
-
-    font = FontProperties(fname=r"C:\Windows\Fonts\simhei.ttf", size=12)
-
-    # 连接到数据库
-    config = {
-        'user': 'your_username',
-        'password': 'your_password',
-        'host': 'localhost',
-        'database': 'tarsgo',
-        'raise_on_warnings': True
-    }
-
-    conn = mysql.connector.connect(**config)
-    cursor = conn.cursor(dictionary=True)
-
-    # 获取物资类别统计
-    cursor.execute("""
-        SELECT c.category, COUNT(s.ID) as count
-        FROM Material_Store s
-        JOIN Material_Category c ON s.category = c.ID
-        GROUP BY c.category
-        ORDER BY count DESC
-    """)
-
-    category_stats = cursor.fetchall()
-    df = pd.DataFrame(category_stats)
-
-    # 设置中文显示
-    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
-    plt.rcParams['axes.unicode_minus'] = False    # 用来正常显示负号
-
-    # 创建饼图
-    plt.figure(figsize=(10, 8))
-    colors = plt.cm.Paired(np.linspace(0, 1, len(df)))
-    wedges, texts, autotexts = plt.pie(
-        df['count'],
-        labels=df['category'],
-        autopct='%1.1f%%',
-        startangle=90,
-        colors=colors,
-        wedgeprops={'edgecolor': 'w', 'linewidth': 1}
-    )
-
-    # 设置标签文本属性
-    for text in texts:
-        text.set_fontproperties(font)
-    for autotext in autotexts:
-        autotext.set_fontproperties(font)
-        autotext.set_size(9)
-
-    plt.axis('equal')  # 确保饼图是圆的
-    plt.title('物资类别分布', fontproperties=font, fontsize=16)
-
-    # 添加总计信息
-    total = df['count'].sum()
-    plt.text(0, -1.2, f'总物资项: {total}项', ha='center', fontproperties=font, fontsize=12)
-    plt.text(0, -1.35, f'截至日期: 2025-03-25', ha='center', fontproperties=font, fontsize=10)
-
-    # 查询各存储位置的物资数量统计
-    cursor.execute("""
-        SELECT s.site, COUNT(ms.ID) as count
-        FROM Material_Store ms
-        JOIN Material_site s ON ms.site = s.ID
-        GROUP BY s.site
-        ORDER BY count DESC
-    """)
-
-    site_stats = cursor.fetchall()
-    site_df = pd.DataFrame(site_stats)
-
-    # 创建条形图
-    plt.figure(figsize=(12, 6))
-    bars = plt.bar(
-        site_df['site'],
-        site_df['count'],
-        color=plt.cm.viridis(np.linspace(0, 1, len(site_df)))
-    )
-
-    # 添加数值标签
-    for bar in bars:
-        height = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width()/2., height + 0.1,
-            f'{height:.0f}',
-            ha='center', va='bottom',
-            fontproperties=font
-        )
-
-    plt.xlabel('存储位置', fontproperties=font, fontsize=12)
-    plt.ylabel('物资数量', fontproperties=font, fontsize=12)
-    plt.title('各存储位置物资数量统计', fontproperties=font, fontsize=14)
-    plt.xticks(fontproperties=font, rotation=45)
+    plt.text(0, -1.2, f'总物资项: {total}项', ha='center', fontsize=12, fontweight='bold')
+    
+    # 调整布局以确保所有元素可见
     plt.tight_layout()
+    
+    # 保存或显示图表
 
-    # 保存图表
-    plt.savefig('material_category_pie.png', dpi=300, bbox_inches='tight')
-    plt.savefig('material_site_bar.png', dpi=300, bbox_inches='tight')
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    plt.close()
+    
 
-    # 关闭数据库连接
-    cursor.close()
-    conn.close()
 
-    print("数据分析和可视化完成，图表已保存！")
+    return save_path

@@ -6,6 +6,8 @@ from typing import List, Dict, Any, Optional
 import uuid
 import json
 
+#TODO:deepseek调用函数，绘图框架(把数据库信息存放在一个文本文件里，可以更改)，本地部署，嵌入式，其他功能，instruction改为预设(把预设信息存放在一个文本文件里，可以更改)
+
 # 导入chat模块
 from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
 
