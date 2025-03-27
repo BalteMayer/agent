@@ -4,7 +4,9 @@ import httpx
 from swarm import Swarm, Agent
 import cv2 as cv
 from tools.chart import plot_material_category_distribution, plot_sign_in_trend, plot_group_member_count
-
+from utils.db_structure import get_db_struct_and_dtype
+from utils.condense import condense_msg
+import json
 
 
 # API密钥和基础URL设置
@@ -30,22 +32,15 @@ class database:
     pass
 
 
-def get_db_struct_and_dtype(time:str , chart_type: str,database: str):
-
-    return "db_info"
-
-def condense_msg(time_info: str, chart_info: str, db_info: str):
-
-    return "message"
-
-def query_and_compute(time_info: str, chart_info: str, db_info: str):
-    return "response"
-
-def clear_agent(agent: Agent):
-    pass
+def query_and_compute(start_index: str, last_index: str, db_info: str):
+    return f"根据数据库信息{db_info}，查询{start_index}到{last_index}的数据，然后进行统计分析"
 
 def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
-    db_info: str = get_db_struct_and_dtype(database)
+
+    # 读取 JSON 文件并转换为字符串
+    with open("config.json", "r", encoding="utf-8") as f:
+        db_info: str = json.dumps(json.load(f), ensure_ascii=False)
+
     message = condense_msg(time_info, chart_info, db_info)
 
     hazuki = Agent(
@@ -77,7 +72,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         agent = hazuki,
         messages = message
     )
-    clear_agent(hazuki)
+    del hazuki
     return assistant
 
 
@@ -95,10 +90,10 @@ def init_agent(
         你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。
         当用户需要你进行数据分析时，请考虑调用函数
         transmit_refined_params_and_db_info(time_info: str, chart_info: str)
-        time_info: 时间信息
+        time_info: 时间或者索引信息
         chart_info: 待分析对象信息
         示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
-        那么时间信息就是“2025年4月”，待分析对象信息就是“考勤情况”
+        那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
         也就是time_info = "2025年4月", chart_info = "考勤情况"
         把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
         """,
