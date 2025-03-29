@@ -1,0 +1,26 @@
+{
+  "host": "localhost",
+  "port": 27017,
+  "username": "",
+  "password": "",
+  "database": "company",
+  "collections": {
+    "departments": {
+      "fields": {
+        "_id": "ObjectId",
+        "名字": "str",
+        "部门": "str"
+      },
+      "sample_data":"{\"_id\": ObjectId(\"67e50e0900ce029f7ac66046\"), \"名字\": \"孙七\", \"部门\": \"销售部\"}"
+    },
+    "attendance": {
+      "fields": {
+        "_id": "ObjectId",
+        "姓名": "str",
+        "日期": "str",
+        "考勤": "str"
+      },
+      "sample_data":"{\"_id\": ObjectId(\"67e50e146add66f28b6746dc\"), \"姓名\": \"张三\", \"日期\": \"2024-03-25\", \"考勤\": \"出勤\"}"
+    }
+  }
+}

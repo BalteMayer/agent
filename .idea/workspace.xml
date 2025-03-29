@@ -4,12 +4,26 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="db">
-      <change afterPath="$PROJECT_DIR$/text/tools.md" afterDir="false" />
+    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="daul aagency 0.3.0">
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Pipfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/material_distribution/material_distribution_2025-03-25_16-58-15.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/material_distribution/material_distribution_2025-03-25_16-59-49.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/material_distribution/material_distribution_2025-03-25_17-00-07.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/material_distribution/material_distribution_2025-03-25_17-00-39.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/sign_in_trend/sign_in_trend_2025-03-25_17-19-14.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/sign_in_trend/sign_in_trend_2025-03-25_20-26-10.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/text/OpenAI+swarm多智能体框架快速入门实战(2).ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/text/mongodb_generator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/chart.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/chart.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/text/introduction.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/text/tarsgo_local_backup.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/text/tools.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/db_structure.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,9 +100,9 @@
       <recent name="D:\pythonProject\agent" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\pythonProject\agent" />
       <recent name="D:\pythonProject\agent\text" />
       <recent name="D:\pythonProject\agent\samples" />
-      <recent name="D:\pythonProject\agent" />
     </key>
   </component>
   <component name="RunManager">
@@ -129,7 +143,11 @@
       <workItem from="1742714187800" duration="7191000" />
       <workItem from="1742742972124" duration="86000" />
       <workItem from="1742785070938" duration="15486000" />
-      <workItem from="1742884587575" duration="10618000" />
+      <workItem from="1742884587575" duration="14040000" />
+      <workItem from="1742909989753" duration="1966000" />
+      <workItem from="1742973529766" duration="8267000" />
+      <workItem from="1743057077825" duration="15253000" />
+      <workItem from="1743140091506" duration="6270000" />
     </task>
     <task id="LOCAL-00001" summary="first commmit">
       <option name="closed" value="true" />
@@ -243,7 +261,63 @@
       <option name="project" value="LOCAL" />
       <updated>1742886699841</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="chart demo">
+      <option name="closed" value="true" />
+      <created>1742896950297</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1742896950297</updated>
+    </task>
+    <task id="LOCAL-00016" summary="daul agency">
+      <option name="closed" value="true" />
+      <created>1743059282591</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1743059282591</updated>
+    </task>
+    <task id="LOCAL-00017" summary="mongodb">
+      <option name="closed" value="true" />
+      <created>1743065746466</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1743065746466</updated>
+    </task>
+    <task id="LOCAL-00018" summary="mongodb">
+      <option name="closed" value="true" />
+      <created>1743065776210</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1743065776210</updated>
+    </task>
+    <task id="LOCAL-00019" summary="daul aagency 1.1.0">
+      <option name="closed" value="true" />
+      <created>1743092548322</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1743092548322</updated>
+    </task>
+    <task id="LOCAL-00020" summary="daul aagency 0.2.0">
+      <option name="closed" value="true" />
+      <created>1743141104940</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1743141104940</updated>
+    </task>
+    <task id="LOCAL-00021" summary="daul aagency 0.3.0">
+      <option name="closed" value="true" />
+      <created>1743229775940</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1743229775940</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -272,7 +346,13 @@
     <MESSAGE value="graph 2.0" />
     <MESSAGE value="graph 2.1 -No ENG" />
     <MESSAGE value="db" />
-    <option name="LAST_COMMIT_MESSAGE" value="db" />
+    <MESSAGE value="chart demo" />
+    <MESSAGE value="daul agency" />
+    <MESSAGE value="mongodb" />
+    <MESSAGE value="daul aagency 1.1.0" />
+    <MESSAGE value="daul aagency 0.2.0" />
+    <MESSAGE value="daul aagency 0.3.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="daul aagency 0.3.0" />
   </component>
   <component name="VgoProject">
     <integration-enabled>false</integration-enabled>
@@ -308,84 +388,100 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>801</line>
+          <line>802</line>
           <option name="timeStamp" value="8" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>809</line>
+          <line>810</line>
           <option name="timeStamp" value="9" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>816</line>
+          <line>817</line>
           <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>819</line>
+          <line>820</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>829</line>
+          <line>830</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>843</line>
+          <line>844</line>
           <option name="timeStamp" value="13" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>849</line>
+          <line>850</line>
           <option name="timeStamp" value="14" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>857</line>
+          <line>858</line>
           <option name="timeStamp" value="15" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>868</line>
+          <line>869</line>
           <option name="timeStamp" value="16" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>865</line>
+          <line>866</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>871</line>
+          <line>872</line>
           <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>875</line>
+          <line>876</line>
           <option name="timeStamp" value="19" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/tools/chart.py</url>
-          <line>884</line>
+          <line>885</line>
           <option name="timeStamp" value="22" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/agent.py</url>
+          <line>34</line>
+          <option name="timeStamp" value="25" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="chart_info" />
+        <watch expression="db_info" />
+        <watch expression="f" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/main_go$aaa.coverage" NAME="aaa 覆盖结果" MODIFIED="1742479751387" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/agent$main.coverage" NAME="main 覆盖结果" MODIFIED="1742312692780" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$chart.coverage" NAME="chart 覆盖结果" MODIFIED="1742889684011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
-    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1742896285878" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1743231698796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/agent$hallo.coverage" NAME="hallo 覆盖结果" MODIFIED="1742267787670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/main_go$mongodb_generator.coverage" NAME="mongodb_generator 覆盖结果" MODIFIED="1743091689234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
+    <SUITE FILE_PATH="coverage/main_go$condense.coverage" NAME="condense 覆盖结果" MODIFIED="1743092197868" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/agent$agent_main.coverage" NAME="agent_main 覆盖结果" MODIFIED="1742288317302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$agent.coverage" NAME="agent 覆盖结果" MODIFIED="1742894279419" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/main_go$test.coverage" NAME="test 覆盖结果" MODIFIED="1742892849485" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
+    <SUITE FILE_PATH="coverage/main_go$aaaaaa.coverage" NAME="aaaaaa 覆盖结果" MODIFIED="1743064569635" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
+    <SUITE FILE_PATH="coverage/main_go$test.coverage" NAME="test 覆盖结果" MODIFIED="1742975952119" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
     <SUITE FILE_PATH="coverage/agent$2826992449api_test.coverage" NAME="2826992449api_test 覆盖结果" MODIFIED="1742205408027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$api_loop.coverage" NAME="api_loop 覆盖结果" MODIFIED="1742370515808" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/main_go$.coverage" NAME=" 覆盖结果" MODIFIED="1742546072550" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/main_go$db_structure.coverage" NAME="db_structure 覆盖结果" MODIFIED="1743085230317" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/agent$agent_manager.coverage" NAME="agent_manager 覆盖结果" MODIFIED="1742294075004" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$insert_data.coverage" NAME="insert_data 覆盖结果" MODIFIED="1742885095471" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
   </component>
