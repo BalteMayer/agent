@@ -361,17 +361,18 @@ def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
 
 
 def query_data(db, collection_name: str,
-               start_index: str, last_index: str, date_field: str = "日期") -> List[Dict[str, Any]]:
-    """查询指定集合中指定日期范围的数据"""
+               start_index: Optional[str] = None, last_index: Optional[str] = None,
+               date_field: str = "日期") -> List[Dict[str, Any]]:
+    """查询指定集合中的数据，支持可选的日期范围筛选"""
     collection = db[collection_name]
 
     # 构建查询条件
-    query = {
-        date_field: {
+    query = {}
+    if start_index and last_index:
+        query[date_field] = {
             "$gte": start_index,
             "$lte": last_index
         }
-    }
 
     # 执行查询
     cursor = collection.find(query)
@@ -386,13 +387,14 @@ def query_data(db, collection_name: str,
     return result
 
 
-def query_and_calculate(start_index: str, last_index: str, value_type: str, coll_info: str, chart_type: str) -> str:
+def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[str] = None,
+                       value_type: str = None, coll_info: str = None, chart_type: str = None) -> str:
     """
-    根据配置连接数据库，查询指定范围数据，并根据图表类型进行计算
+    根据配置连接数据库，查询指定范围(可选)数据，并根据图表类型进行计算
 
     参数:
-    - start_index: 起始索引(日期等)
-    - last_index: 结束索引
+    - start_index: 可选的起始索引(日期等)
+    - last_index: 可选的结束索引
     - value_type: 要分析的数据字段
     - coll_info: 集合(表)名称
     - chart_type: 图表类型
@@ -423,8 +425,8 @@ def query_and_calculate(start_index: str, last_index: str, value_type: str, coll
             "collection": coll_info,
             "value_type": value_type,
             "time_range": {
-                "start": start_index,
-                "end": last_index
+                "start": start_index if start_index else "全部",
+                "end": last_index if last_index else "全部"
             },
             "data_count": len(data),
             "result": calculation_result
@@ -440,8 +442,8 @@ def query_and_calculate(start_index: str, last_index: str, value_type: str, coll
             "collection": coll_info,
             "value_type": value_type,
             "time_range": {
-                "start": start_index,
-                "end": last_index
+                "start": start_index if start_index else "全部",
+                "end": last_index if last_index else "全部"
             }
         }
         return json.dumps(error_result, ensure_ascii=False)

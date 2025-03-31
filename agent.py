@@ -31,16 +31,10 @@ class database:
     pass
 
 
-# def query_and_compute(start_index: str, last_index: str, value_type: str, coll_info: str, chart_type: str):
-#     with open("config.json", "r", encoding="utf-8") as f:
-#         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
-#     print("信息如下",start_index, last_index,  value_type, coll_info, chart_type, db_info)
-#     return f"根据数据库信息{db_info}，查询{start_index}到{last_index}的数据，然后对{value_type}进行统计分析,绘出{coll_info}图表"
-
 def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
     print("OK")
-
+    print(time_info)
     # 读取 JSON 文件并转换为字符串
     with open("config.json", "r", encoding="utf-8") as f:
         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
@@ -65,6 +59,9 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         chart_type: str的信息是用户需要进行数据分析的时需要绘图的格式，你需要将此参数转化为合适的chart_type: str值
         chart_type: str只能是以下几种值:"bar","line","pie","scatter","heatmap"。其分别对应条形图，折线图，饼图，散点图，热力图。而你需要根据chart_info的内容，选择合适的图表类型，将其作为参数。
         coll_info: str的信息是用户需要进行数据分析的时需要绘图的对象所在的collection的名称，你需要将此参数转化为合适的coll_info: str值
+        
+        如果你判断用户没有输入索引信息，那么start_index: str, last_index: str都设置为None，表示统计全局。比如用户说“我了解各个部门人员数量情况”。这个没有包含索引信息，则
+        start_index: str = None, last_index: str = None
         
         我们举例假设
         time_info是"2025年4月",而根据db_info，其应该是"2025-04"这样的格式，那么
@@ -113,6 +110,10 @@ def init_agent(
         那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
         也就是time_info = "2025年4月", chart_info = "考勤情况"
         把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
+        
+        如果你判断没有索引信息，那么time_info = "None"
+        注意不是NoneType，而是字符串"None"
+        
         """,
         functions=[
             transmit_refined_params_and_db_info
