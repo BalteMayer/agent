@@ -2,9 +2,8 @@ import os
 from openai import OpenAI
 import httpx
 from swarm import Swarm, Agent
-import cv2 as cv
-from tools.chart import plot_material_category_distribution, plot_sign_in_trend, plot_group_member_count
 from utils.condense import condense_msg
+from utils.caculator import query_and_calculate as query_and_compute
 import json
 import time
 
@@ -32,11 +31,11 @@ class database:
     pass
 
 
-def query_and_compute(start_index: str, last_index: str, value_type: str, coll_info: str, chart_type: str):
-    with open("config.json", "r", encoding="utf-8") as f:
-        db_info: str = json.dumps(json.load(f), ensure_ascii=False)
-    print("信息如下",start_index, last_index,  value_type, coll_info, chart_type, db_info)
-    return f"根据数据库信息{db_info}，查询{start_index}到{last_index}的数据，然后对{value_type}进行统计分析,绘出{coll_info}图表"
+# def query_and_compute(start_index: str, last_index: str, value_type: str, coll_info: str, chart_type: str):
+#     with open("config.json", "r", encoding="utf-8") as f:
+#         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
+#     print("信息如下",start_index, last_index,  value_type, coll_info, chart_type, db_info)
+#     return f"根据数据库信息{db_info}，查询{start_index}到{last_index}的数据，然后对{value_type}进行统计分析,绘出{coll_info}图表"
 
 def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
