@@ -62,6 +62,8 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         
         如果你判断用户没有输入索引信息，那么start_index: str, last_index: str都设置为None，表示统计全局。比如用户说“我了解各个部门人员数量情况”。这个没有包含索引信息，则
         start_index: str = None, last_index: str = None
+        重申一遍，没有明确给出索引相关信息就是总体讨论"我想了解XX情况"等于”我想了解总体的XX情况“
+        
         
         我们举例假设
         time_info是"2025年4月",而根据db_info，其应该是"2025-04"这样的格式，那么
@@ -70,6 +72,8 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         那么可以判断coll_info = "attendance", value_info = "出勤"
         同时判断chart_type适合"bar","line","pie","scatter","heatmap"里哪一种图然后填入       
         你将得到一个str类型的返回值
+        
+       
         """,
         functions=[query_and_compute]
     )
