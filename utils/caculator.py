@@ -714,8 +714,9 @@ class ChartCalculatorFactory:
             "pie": PieChartCalculator,
             "scatter": ScatterChartCalculator,
             "heatmap": HeatMapCalculator,
-            "yoy_mom": YoYMoMCalculator,  # 新增同比环比计算器
-            "multi_field": MultiFieldAnalysisCalculator  # 新增多字段分析计算器
+            "yoy_mom": YoYMoMCalculator,  # 同比环比计算器
+            "multi_field": MultiFieldAnalysisCalculator,  # 多字段分析计算器
+            "ranking": RankingCalculator  # 排名分析计算器
         }
 
         calculator_class = calculator_map.get(chart_type.lower())
@@ -769,10 +770,10 @@ def query_data(db, collection_name: str,
     return result
 
 
-
 def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[str] = None,
-                     value_type: str = None, coll_info: str = None, chart_type: str = None,
-                     group_by_fields: List[str] = None) -> str:
+                        value_type: str = None, coll_info: str = None, chart_type: str = None,
+                        group_by_fields: List[str] = None, limit: int = 5, group_by: str = None,
+                        ascending: bool = False) -> str:
     """
     根据配置连接数据库，查询指定范围(可选)数据，并根据图表类型进行计算
 
@@ -783,6 +784,9 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     - coll_info: 集合(表)名称
     - chart_type: 图表类型
     - group_by_fields: 多字段分析时的分组字段列表
+    - limit: 排名分析时返回的最大数量，默认为5
+    - group_by: 排名分析的分组字段
+    - ascending: 排序方向，True为升序，False为降序
 
     返回:
     - JSON格式的计算结果
@@ -799,13 +803,19 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
         data = query_data(db, coll_info, start_index, last_index)
 
         # 创建对应的图表计算器
-        calculator = ChartCalculatorFactory.create_calculator(chart_type)
-
-        # 计算结果
-        if chart_type.lower() == "multi_field" and group_by_fields:
-            calculation_result = calculator.calculate(data, value_type, group_by_fields=group_by_fields)
+        if chart_type.lower() == "ranking":
+            # 使用排名计算器
+            calculator = RankingCalculator()
+            calculation_result = calculator.calculate(data, value_type, limit, group_by, ascending)
         else:
-            calculation_result = calculator.calculate(data, value_type)
+            # 使用标准图表计算器工厂
+            calculator = ChartCalculatorFactory.create_calculator(chart_type)
+
+            # 根据图表类型调用不同的计算方法
+            if chart_type.lower() == "multi_field" and group_by_fields:
+                calculation_result = calculator.calculate(data, value_type, group_by_fields=group_by_fields)
+            else:
+                calculation_result = calculator.calculate(data, value_type)
 
         # 添加元数据
         result = {
