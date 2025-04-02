@@ -17,25 +17,21 @@ base_url = 'https://api.openai.com/v1'
 os.environ['OPENAI_API'] = api_key
 os.environ['OPENAI_BASE_URL'] = base_url
 
-# 创建具有更长超时时间的HTTP客户端
+
 http_client = httpx.Client(
     timeout=httpx.Timeout(connect=30.0, read=180.0, write=30.0, pool=30.0)
 )
 
-# 使用自定义HTTP客户端初始化OpenAI客户端
 client = OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
 swarm_client = Swarm(client)
 
-
-class database:
-    pass
 
 
 def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
     print("OK")
     print(time_info)
-    # 读取 JSON 文件并转换为字符串
+
     with open("config.json", "r", encoding="utf-8") as f:
         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
 
@@ -45,11 +41,11 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
     print("OK")
 
     hazuki = Agent(
-        name="hazuki",
+        name="Tomoka",
         model="gpt-4o-mini",
         instructions=
         """
-        你是一个数据分析助手，你每次都请务必根据message里的信息调用query_and_compute函数，获取分析结果,
+        你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息调用query_and_compute函数，获取分析结果,
         query_and_compute(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
         这个函数用于从数据库里获取数据，然后把数据进行一些统计处理，最后返回str类型的分析结果，用于提供给前端绘图。
         
@@ -84,7 +80,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         
         如果用户需要排名或TOP N的分析，例如"显示考勤率最高的前5个部门"、"哪些员工迟到次数最多"，
         请使用chart_type="ranking"，并设置limit参数(默认为5)和group_by参数。
-        【重要】当用户查询包含"最高"、"最低"、"排名"、"前几"、"top"等词汇时，必须使用chart_type="ranking"。
+        当用户查询包含"最高"、"最低"、"排名"、"前几"、"top"等词汇时，必须使用chart_type="ranking"。
         例如:
         - "显示考勤率最高的前5个部门" -> chart_type="ranking", value_type="考勤", group_by_fields="部门", limit=5
         - "哪些部门的出勤率最好" -> chart_type="ranking", value_type="考勤", group_by_fields="部门"
@@ -149,7 +145,6 @@ def init_agent(
 
 
 if __name__ == '__main__':
-    # 智能体定义
     agent_main = init_agent(model_name='gpt-4o')
     # TODO: 新开页面，记忆，functions
     response = swarm_client.run(agent_main,messages=[{"role":"user","content":"你好"}])

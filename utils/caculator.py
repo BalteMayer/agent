@@ -433,7 +433,7 @@ class YoYMoMCalculator(ChartCalculator):
             else:
                 yoy_change = {"absolute": current_value, "percentage": 100}
 
-        # 构建结果
+
         result = {
             "current_period": {
                 "period": current_period,
@@ -457,7 +457,6 @@ class YoYMoMCalculator(ChartCalculator):
 
 
 class MultiFieldAnalysisCalculator(ChartCalculator):
-    """多字段结合分析计算器"""
 
     def calculate(self, data: List[Dict[str, Any]], value_type: str, group_by_fields: List[str] = None) -> Dict[
         str, Any]:
@@ -471,9 +470,7 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
         if not data:
             return {"groups": [], "summary": {}}
 
-        # 如果未指定分组字段，尝试自动选择
         if not group_by_fields:
-            # 排除value_type和常见的日期字段
             excluded_fields = [value_type]
             group_by_fields = []
 
@@ -482,20 +479,20 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
                                                             for keyword in ['_id', '日期', 'date', '时间']):
                     group_by_fields.append(field)
 
-                    # 最多选择两个字段作为分组维度
+
                     if len(group_by_fields) >= 2:
                         break
 
-        # 如果仍然没有分组字段，返回错误
+
         if not group_by_fields:
             return {"error": "无法确定分组字段"}
 
-        # 多字段分组统计
+
         grouped_data = {}
         group_values = {field: set() for field in group_by_fields}
 
         for item in data:
-            # 构建分组键（由多个字段值组成的元组）
+
             group_key_parts = []
             valid_item = True
 
@@ -512,7 +509,7 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
             group_key = tuple(group_key_parts)
 
-            # 初始化分组数据
+
             if group_key not in grouped_data:
                 grouped_data[group_key] = {
                     "count": 0,
@@ -520,7 +517,7 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
                     "values": []
                 }
 
-            # 根据value_type进行统计
+
             if value_type in item:
                 grouped_data[group_key]["count"] += 1
 
@@ -532,16 +529,16 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
                 else:
                     grouped_data[group_key]["values"].append(item[value_type])
 
-        # 构建结果
+
         groups = []
         for group_key, group_data in grouped_data.items():
             group_info = {}
 
-            # 添加分组维度信息
+
             for i, field in enumerate(group_by_fields):
                 group_info[field] = group_key[i]
 
-            # 添加统计信息
+
             group_info["count"] = group_data["count"]
             group_info["sum"] = group_data["sum"]
             group_info["avg"] = np.mean(group_data["values"]) if group_data["values"] else 0
@@ -552,7 +549,7 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
             groups.append(group_info)
 
-        # 计算总体摘要
+
         summary = {
             "total_groups": len(groups),
             "dimensions": group_by_fields,
@@ -560,7 +557,7 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
             "total_sum": sum(g["sum"] for g in groups)
         }
 
-        # 各维度的唯一值
+
         dimension_values = {field: sorted(list(values)) for field, values in group_values.items()}
 
         return {
@@ -575,33 +572,23 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
 
 class RankingCalculator(ChartCalculator):
-    """排名计算器，用于计算TOP N类排名数据"""
+
 
     def calculate(self, data: List[Dict[str, Any]], value_type: str,
                   limit: int = 5, group_by: str = None, ascending: bool = False) -> Dict[str, Any]:
-        """
-        计算排名数据
 
-        参数:
-        - data: 数据列表
-        - value_type: 要分析的数据字段(如"考勤")
-        - limit: 返回的排名数量，默认为5
-        - group_by: 分组字段，如"部门"
-        - ascending: 排序方向，True为升序，False为降序
-        """
         if not data:
             return {"ranks": [], "stats": {}}
 
-        # 读取数据库配置
+
         try:
             with open("config.json", "r", encoding="utf-8") as f:
                 db_info = json.load(f)
         except Exception:
             db_info = {}
 
-        # 检查是否需要通过关联丰富数据
+
         if group_by and group_by not in data[0]:
-            # 尝试找出可能的关联字段
             primary_key = None
             for key in ["姓名", "名字", "学生", "员工", "用户", "name"]:
                 if key in data[0]:
@@ -609,17 +596,16 @@ class RankingCalculator(ChartCalculator):
                     break
 
             if primary_key:
-                # 查找可能的关联集合和字段
                 collections = db_info.get("collections", {})
                 auxiliary_collection = None
                 auxiliary_key = None
 
-                # 遍历集合，寻找包含group_by字段的集合
+
                 for coll_name, coll_info in collections.items():
                     fields = coll_info.get("fields", {})
                     if group_by in fields:
                         auxiliary_collection = coll_name
-                        # 寻找可能的关联键
+
                         for field in fields:
                             if field in ["姓名", "名字", "学生", "员工", "用户", "name"]:
                                 auxiliary_key = field
@@ -627,7 +613,7 @@ class RankingCalculator(ChartCalculator):
                         if auxiliary_key:
                             break
 
-                # 如果找到了可能的关联，执行关联操作
+
                 if auxiliary_collection and auxiliary_key:
                     join_config = {
                         "auxiliary_collection": auxiliary_collection,
@@ -635,10 +621,10 @@ class RankingCalculator(ChartCalculator):
                         "auxiliary_key": auxiliary_key,
                         "fields_to_include": [group_by]
                     }
-                    # 使用通用关联函数丰富数据
+
                     data = enrich_data_with_relations(data, join_config, db_info)
 
-        # 如果数据关联后仍然缺少group_by字段，放弃group_by
+
         if group_by and (not data or group_by not in data[0]):
             potential_fields = []
             for field in data[0].keys():
@@ -651,18 +637,16 @@ class RankingCalculator(ChartCalculator):
         if not group_by:
             return {"error": "无法确定分组字段"}
 
-        # 使用通用分组和聚合函数来计算分组结果
+
         aggregations = [
-            # 计算总记录数
             {"type": "count", "field": value_type, "output": "total"},
-            # 计算符合特定条件的记录数（如"出勤"）
             {"type": "count", "field": value_type, "condition": {value_type: "出勤"}, "output": "matches"}
         ]
 
-        # 执行分组与聚合
+
         grouped_data = group_and_aggregate(data, group_by, value_type, aggregations)
 
-        # 计算派生指标（考勤率）
+
         derived_metrics = [
             {
                 "output": "percentage",
@@ -671,21 +655,21 @@ class RankingCalculator(ChartCalculator):
             }
         ]
 
-        # 计算派生指标
+
         result_data = calculate_derived_metrics(grouped_data, derived_metrics)
 
-        # 按派生指标排序
+
         result_data.sort(key=lambda x: x.get("percentage", 0), reverse=not ascending)
 
-        # 限制返回数量
+
         if limit > 0 and len(result_data) > limit:
             result_data = result_data[:limit]
 
-        # 添加排名信息
+
         for i, item in enumerate(result_data):
             item["rank"] = i + 1
 
-        # 计算整体统计
+
         percentages = [item.get("percentage", 0) for item in result_data]
         overall_stats = {
             "average_percentage": round(sum(percentages) / len(percentages), 2) if percentages else 0,
@@ -703,20 +687,19 @@ class RankingCalculator(ChartCalculator):
 
 
 class ChartCalculatorFactory:
-    """图表计算器工厂类"""
 
     @staticmethod
     def create_calculator(chart_type: str) -> ChartCalculator:
-        """创建对应类型的计算器"""
+
         calculator_map = {
             "bar": BarChartCalculator,
             "line": LineChartCalculator,
             "pie": PieChartCalculator,
             "scatter": ScatterChartCalculator,
             "heatmap": HeatMapCalculator,
-            "yoy_mom": YoYMoMCalculator,  # 同比环比计算器
-            "multi_field": MultiFieldAnalysisCalculator,  # 多字段分析计算器
-            "ranking": RankingCalculator  # 排名分析计算器
+            "yoy_mom": YoYMoMCalculator,
+            "multi_field": MultiFieldAnalysisCalculator,
+            "ranking": RankingCalculator
         }
 
         calculator_class = calculator_map.get(chart_type.lower())
@@ -727,7 +710,6 @@ class ChartCalculatorFactory:
 
 
 def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
-    """连接到MongoDB数据库"""
     host = db_info.get("host", "localhost")
     port = db_info.get("port", 27017)
     username = db_info.get("username", "")
@@ -746,10 +728,9 @@ def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
 def query_data(db, collection_name: str,
                start_index: Optional[str] = None, last_index: Optional[str] = None,
                date_field: str = "日期") -> List[Dict[str, Any]]:
-    """查询指定集合中的数据，支持可选的日期范围筛选"""
     collection = db[collection_name]
 
-    # 构建查询条件
+
     query = {}
     if start_index and last_index:
         query[date_field] = {
@@ -757,10 +738,10 @@ def query_data(db, collection_name: str,
             "$lte": last_index
         }
 
-    # 执行查询
+
     cursor = collection.find(query)
 
-    # 转换为列表并删除MongoDB的_id字段(因为它不能被直接序列化为JSON)
+
     result = []
     for doc in cursor:
         if '_id' in doc:
@@ -792,32 +773,28 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     - JSON格式的计算结果
     """
     try:
-        # 读取配置文件
         with open("config.json", "r", encoding="utf-8") as f:
             db_info = json.load(f)
 
-        # 连接数据库
         db = connect_to_database(db_info)
 
-        # 查询数据
         data = query_data(db, coll_info, start_index, last_index)
 
-        # 创建对应的图表计算器
+
         if chart_type.lower() == "ranking":
-            # 使用排名计算器
+
             calculator = RankingCalculator()
             calculation_result = calculator.calculate(data, value_type, limit, group_by, ascending)
         else:
-            # 使用标准图表计算器工厂
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
 
-            # 根据图表类型调用不同的计算方法
+
             if chart_type.lower() == "multi_field" and group_by_fields:
                 calculation_result = calculator.calculate(data, value_type, group_by_fields=group_by_fields)
             else:
                 calculation_result = calculator.calculate(data, value_type)
 
-        # 添加元数据
+
         result = {
             "chart_type": chart_type,
             "collection": coll_info,
@@ -830,7 +807,6 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
             "result": calculation_result
         }
 
-        # 将结果转换为JSON字符串并返回
         return json.dumps(result, ensure_ascii=False)
 
     except Exception as e:
