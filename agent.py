@@ -3,13 +3,13 @@ from openai import OpenAI
 import httpx
 from swarm import Swarm, Agent
 from utils.condense import condense_msg
-from utils.caculator import query_and_calculate as query_and_compute
+from src.caculator import query_and_calculate as query_and_compute
 import json
 import time
 
 
 # API密钥和基础URL设置
-api_key = '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'
+api_key = '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'
 base_url = 'https://api.openai.com/v1'
 # api_key = 'sk-195bd56c24a14123be57b0d94fa45e3d'
 # base_url = 'https://api.deepseek.com/v1'

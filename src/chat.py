@@ -1,6 +1,6 @@
-from utils.api_loop import run_api_loop
+from src.api_loop import run_api_loop
 from agent import init_agent, client
-from utils.memory import ConversationMemory
+from src.memory import ConversationMemory
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import httpx
 import time
