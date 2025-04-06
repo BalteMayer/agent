@@ -1,11 +1,12 @@
-import os
+from src.caculator import query_and_calculate as query_and_compute
+from utils.condense import condense_msg
+from src.get_db_config import describe_db_info
+from swarm import Swarm, Agent
 from openai import OpenAI
 import httpx
-from swarm import Swarm, Agent
-from utils.condense import condense_msg
-from src.caculator import query_and_calculate as query_and_compute
 import json
 import time
+import os
 
 
 # API密钥和基础URL设置
@@ -124,21 +125,31 @@ def init_agent(
         instructions=
         """
         你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。
-        当用户需要你进行数据分析时，请考虑调用函数
-        transmit_refined_params_and_db_info(time_info: str, chart_info: str)
-        time_info: 时间或者索引信息
-        chart_info: 待分析对象信息
-        示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
-        那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
-        也就是time_info = "2025年4月", chart_info = "考勤情况"
-        把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
         
-        如果你判断没有索引信息，那么time_info = "None"
-        注意不是NoneType，而是字符串"None"
+        当用户需要你进行数据分析时，请考虑调用函数。如果没有分析类的需求请不要调用函数。
+        transmit_refined_params_and_db_info(time_info: str, chart_info: str)
+            time_info: 时间或者索引信息
+            chart_info: 待分析对象信息
+            示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
+            那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
+            也就是time_info = "2025年4月", chart_info = "考勤情况"
+            把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
+            
+            如果你判断没有索引信息，那么time_info = "None"
+            注意不是NoneType，而是字符串"None"
+            
+        当用户需要知道数据库的基本信息时，请考虑调用函数
+        比如”请告诉我数据库信息“
+        describe_db_info -> str
+            这个函数用于获取数据库的基本信息，返回值是一个str类型的描述信息
+            你需要根据这个信息把数据库基本信息以更语义化和自然的方式描述给用户
+            返回值不能展示给用户
+        
         
         """,
         functions=[
-            transmit_refined_params_and_db_info
+            transmit_refined_params_and_db_info,
+            describe_db_info
         ]
     )
 
