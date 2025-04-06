@@ -1,16 +1,17 @@
-import uvicorn
-from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect, Request, HTTPException
+from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
+from fastapi import Request
+import uvicorn
 import uuid
 import json
+import time
+
+
 
 #TODO:deepseek调用函数，绘图框架(把数据库信息存放在一个文本文件里，可以更改)，本地部署，嵌入式，其他功能，instruction改为预设(把预设信息存放在一个文本文件里，可以更改)
-
-# 导入chat模块
-from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
-
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
 
 # 配置CORS
@@ -52,8 +53,7 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-# 在现有引入后添加
-from fastapi import Request
+
 
 
 # 修改现有的聊天API端点
@@ -196,12 +196,22 @@ def get_session(session_id: str):
 
 
 @app.delete("/api/sessions/{session_id}")
-def delete_session(session_id: str):
-    """删除指定的会话"""
-    if session_id in sessions:
-        del sessions[session_id]
+def api_delete_session(session_id: str, req: Request):
+    """API端点：删除指定的会话及其文件"""
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    combined_id = f"{user_id}:{session_id}"
 
-    return {"status": "success"}
+    # 导入会话管理器
+    from src.chat import memory_manager, sessions
+
+    # 删除会话及其文件
+    success = memory_manager.delete_session(combined_id)
+
+    # 如果在会话状态字典中也存在该会话，删除它
+    if combined_id in sessions:
+        del sessions[combined_id]
+
+    return {"status": "success" if success else "not_found"}
 
 
 @app.get("/api/config")
@@ -214,6 +224,54 @@ def get_config():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/api/sessions")
+def list_sessions(req: Request):
+    """获取当前用户的所有可用会话列表"""
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+
+    # 导入会话管理器
+    from src.chat import memory_manager
+
+    # 获取所有可用会话
+    all_sessions = memory_manager.list_available_sessions()
+
+    # 筛选属于当前用户的会话
+    user_sessions = []
+    for session in all_sessions:
+        if session['session_id'].startswith(f"{user_id}:"):
+            # 提取实际的会话ID（去除用户ID前缀）
+            actual_session_id = session['session_id'].split(':', 1)[1] if ':' in session['session_id'] else session[
+                'session_id']
+
+            # 加载会话数据以获取最后消息
+            session_data = memory_manager.get_messages(session['session_id'])
+
+            # 提取最后的用户消息和助手回复
+            last_user_message = ""
+            last_assistant_message = ""
+            for msg in reversed(session_data):
+                if msg["role"] == "user" and not last_user_message:
+                    last_user_message = msg["content"]
+                elif msg["role"] == "assistant" and not last_assistant_message:
+                    last_assistant_message = msg["content"]
+
+                if last_user_message and last_assistant_message:
+                    break
+
+            user_sessions.append({
+                "session_id": actual_session_id,
+                "last_updated": session['last_modified'],
+                "last_updated_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(session['last_modified'])),
+                "message_count": len(session_data),
+                "last_user_message": last_user_message[:50] + ("..." if len(last_user_message) > 50 else ""),
+                "last_assistant_message": last_assistant_message[:50] + (
+                    "..." if len(last_assistant_message) > 50 else "")
+            })
+
+    return {"sessions": user_sessions}
+
 
 
 if __name__ == "__main__":

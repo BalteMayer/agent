@@ -2,6 +2,8 @@ import spacy
 import numpy as np
 from typing import List, Dict, Any, Optional
 import json
+import os
+import time
 
 
 class ConversationMemory:
@@ -27,6 +29,16 @@ class ConversationMemory:
 
         # 知识图谱 - 存储实体和关系
         self.knowledge_graph = {}
+
+        # 确保存储目录存在
+        self.storage_dir = './data/memory'
+        self.sessions_dir = os.path.join(self.storage_dir, 'sessions')
+        self.entity_dir = os.path.join(self.storage_dir, 'entities')
+        self.kg_dir = os.path.join(self.storage_dir, 'knowledge_graphs')
+
+        os.makedirs(self.sessions_dir, exist_ok=True)
+        os.makedirs(self.entity_dir, exist_ok=True)
+        os.makedirs(self.kg_dir, exist_ok=True)
 
         # 关系类型映射 - 实体属性关系
         self.relation_types = {
@@ -61,8 +73,107 @@ class ConversationMemory:
             "下属": ["下属", "手下", "团队成员"],
         }
 
+
+    def _get_file_path(self, directory, session_id):
+        """获取文件路径，将会话ID转换为安全的文件名"""
+        safe_id = session_id.replace('/', '_').replace(':', '_')
+        return os.path.join(directory, f"{safe_id}.json")
+
+    def _load_session_data(self, session_id):
+        """从文件加载会话数据"""
+        # 加载会话消息
+        session_file = self._get_file_path(self.sessions_dir, session_id)
+        if os.path.exists(session_file):
+            try:
+                with open(session_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.sessions[session_id] = data.get('messages', [])
+            except Exception as e:
+                print(f"加载会话消息失败 {session_id}: {str(e)}")
+                if session_id not in self.sessions:
+                    self.sessions[session_id] = []
+        else:
+            # 如果文件不存在，创建空会话
+            self.sessions[session_id] = []
+
+        # 加载实体记忆
+        entity_file = self._get_file_path(self.entity_dir, session_id)
+        if os.path.exists(entity_file):
+            try:
+                with open(entity_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.entity_memory[session_id] = data.get('entity_memory', {})
+            except Exception as e:
+                print(f"加载实体记忆失败 {session_id}: {str(e)}")
+                if session_id not in self.entity_memory:
+                    self.entity_memory[session_id] = {}
+        else:
+            # 如果文件不存在，创建空实体记忆
+            self.entity_memory[session_id] = {}
+
+        # 加载知识图谱
+        kg_file = self._get_file_path(self.kg_dir, session_id)
+        if os.path.exists(kg_file):
+            try:
+                with open(kg_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.knowledge_graph[session_id] = data.get('knowledge_graph', {"实体": {}, "关系": []})
+            except Exception as e:
+                print(f"加载知识图谱失败 {session_id}: {str(e)}")
+                if session_id not in self.knowledge_graph:
+                    self.knowledge_graph[session_id] = {"实体": {}, "关系": []}
+        else:
+            # 如果文件不存在，创建空知识图谱
+            self.knowledge_graph[session_id] = {"实体": {}, "关系": []}
+
+    def _save_session_data(self, session_id):
+        """保存会话数据到文件"""
+        # 保存会话消息
+        if session_id in self.sessions:
+            session_file = self._get_file_path(self.sessions_dir, session_id)
+            try:
+                with open(session_file, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        'session_id': session_id,
+                        'messages': self.sessions[session_id],
+                        'last_updated': time.time()
+                    }, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"保存会话消息失败 {session_id}: {str(e)}")
+
+        # 保存实体记忆
+        if session_id in self.entity_memory:
+            entity_file = self._get_file_path(self.entity_dir, session_id)
+            try:
+                with open(entity_file, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        'session_id': session_id,
+                        'entity_memory': self.entity_memory[session_id],
+                        'last_updated': time.time()
+                    }, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"保存实体记忆失败 {session_id}: {str(e)}")
+
+        # 保存知识图谱
+        if session_id in self.knowledge_graph:
+            kg_file = self._get_file_path(self.kg_dir, session_id)
+            try:
+                with open(kg_file, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        'session_id': session_id,
+                        'knowledge_graph': self.knowledge_graph[session_id],
+                        'last_updated': time.time()
+                    }, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"保存知识图谱失败 {session_id}: {str(e)}")
+
+
     def add_message(self, session_id: str, role: str, content: str) -> None:
         """添加消息到会话记忆"""
+
+        # 先加载最新会话数据
+        self._load_session_data(session_id)
+
         if session_id not in self.sessions:
             self.sessions[session_id] = []
             self.entity_memory[session_id] = {}
@@ -85,6 +196,9 @@ class ConversationMemory:
         if role == "user":
             self._extract_entities(session_id, content)
             self._update_knowledge_graph(session_id, content)
+
+        # 保存更新后的数据
+        self._save_session_data(session_id)
 
     def _extract_entities(self, session_id: str, text: str) -> None:
         """从文本中提取命名实体"""
@@ -109,6 +223,8 @@ class ConversationMemory:
                 if text not in self.entity_memory[session_id][entity_key]["contexts"]:
                     if len(self.entity_memory[session_id][entity_key]["contexts"]) < 5:
                         self.entity_memory[session_id][entity_key]["contexts"].append(text)
+
+            self._save_session_data(session_id)
 
     def _identify_relation_type(self, text, entity1_type, entity2_type):
         """基于文本内容识别两个实体之间的关系类型"""
@@ -196,8 +312,15 @@ class ConversationMemory:
                 if relation not in self.knowledge_graph[session_id]["关系"]:
                     self.knowledge_graph[session_id]["关系"].append(relation)
 
+        self._save_session_data(session_id)
+
     def get_messages(self, session_id: str, include_entities=True) -> List[Dict[str, str]]:
         """获取会话消息历史，包括实体记忆增强和知识图谱"""
+
+        """获取会话消息历史，包括实体记忆增强和知识图谱"""
+        # 先尝试从文件加载最新数据
+        self._load_session_data(session_id)
+
         if session_id not in self.sessions:
             return []
 
@@ -235,23 +358,6 @@ class ConversationMemory:
                     "content": f"知识图谱: {kg_str}"
                 })
 
-        # # 然后添加实体记忆的系统消息
-        # if include_entities and session_id in self.entity_memory and self.entity_memory[session_id]:
-        #     entity_info = "以下是本次对话中提到的重要信息:\n"
-        #     for entity_key, entity in self.entity_memory[session_id].items():
-        #         # 只包括被提到多次或有多个上下文的实体
-        #         if entity["mentions"] > 1 or len(entity["contexts"]) > 1:
-        #             entity_info += f"- {entity['text']} ({entity['type']}): 在对话中出现了{entity['mentions']}次\n"
-        #             if entity["contexts"]:
-        #                 for i, context in enumerate(entity["contexts"]):
-        #                     if i < 3:  # 限制上下文数量
-        #                         entity_info += f"  - 上下文: \"{context}\"\n"
-        #
-        #     if len(entity_info) > len("以下是本次对话中提到的重要信息:\n"):
-        #         messages.append({
-        #             "role": "system",
-        #             "content": entity_info
-        #         })
 
         # 然后添加历史消息
         messages.extend(self.sessions[session_id])
@@ -269,10 +375,17 @@ class ConversationMemory:
 
     def clear_session(self, session_id: str) -> bool:
         """清除会话记忆"""
+        # 先加载最新会话数据，确保文件存在
+        self._load_session_data(session_id)
+
+        # 清空内存中的数据
         if session_id in self.sessions:
             self.sessions[session_id] = []
             self.entity_memory[session_id] = {}
             self.knowledge_graph[session_id] = {"实体": {}, "关系": []}
+
+            # 保存空数据
+            self._save_session_data(session_id)
             return True
         return False
 
@@ -303,3 +416,58 @@ class ConversationMemory:
         print("实体列表:")
         for key, entity in self.entity_memory.get(session_id, {}).items():
             print(f"  - {entity['text']} ({entity['type']}): 提到 {entity['mentions']} 次")
+
+    def delete_session(self, session_id: str) -> bool:
+        """删除会话及其文件"""
+        # 删除文件
+        session_file = self._get_file_path(self.sessions_dir, session_id)
+        entity_file = self._get_file_path(self.entity_dir, session_id)
+        kg_file = self._get_file_path(self.kg_dir, session_id)
+
+        files = [session_file, entity_file, kg_file]
+        deleted = False
+
+        for file_path in files:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    deleted = True
+                except Exception as e:
+                    print(f"删除文件失败 {file_path}: {str(e)}")
+
+        # 从内存中删除
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+
+        if session_id in self.entity_memory:
+            del self.entity_memory[session_id]
+
+        if session_id in self.knowledge_graph:
+            del self.knowledge_graph[session_id]
+
+        return deleted
+
+    def list_available_sessions(self) -> List[Dict[str, Any]]:
+        """列出所有可用的会话"""
+        sessions = []
+        try:
+            for file_name in os.listdir(self.sessions_dir):
+                if file_name.endswith('.json'):
+                    session_id = file_name[:-5].replace('_', ':')  # 还原会话ID
+
+                    # 获取最后修改时间
+                    file_path = os.path.join(self.sessions_dir, file_name)
+                    last_modified = os.path.getmtime(file_path)
+
+                    # 添加到列表
+                    sessions.append({
+                        'session_id': session_id,
+                        'last_modified': last_modified
+                    })
+
+            # 按最后修改时间排序，最新的在前
+            sessions.sort(key=lambda x: x['last_modified'], reverse=True)
+        except Exception as e:
+            print(f"列出会话失败: {str(e)}")
+
+        return sessions

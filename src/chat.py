@@ -55,8 +55,9 @@ def call_api_with_retry(client, agent, messages, stream):
 def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     """处理用户消息，返回智能体响应"""
     # 获取或创建会话，使用用户ID和会话ID组合
-    session = get_or_create_session(session_id, user_id)
     combined_id = f"{user_id}:{session_id}"
+
+    session = get_or_create_session(session_id, user_id)
 
     # 添加用户消息到历史
     memory_manager.add_message(combined_id, "user", user_message)
@@ -66,7 +67,6 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
         "role": "system",  # 使用system角色
         "content": f"知识图谱: {json.dumps(knowledge_graph, ensure_ascii=False)}"  # 将知识图谱作为内容
     }
-
 
     # 获取当前会话的消息历史
     messages = memory_manager.get_messages(combined_id)
