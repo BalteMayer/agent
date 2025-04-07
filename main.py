@@ -106,14 +106,6 @@ def chat(request: ChatRequest, req: Request):
             raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
 
 
-# 修改清除会话API端点
-@app.post("/api/sessions/{session_id}/clear")
-def api_clear_session(session_id: str, req: Request):
-    """API端点：清除会话"""
-    user_id = req.headers.get("X-Forwarded-For", req.client.host)
-    return clear_session(session_id, user_id)
-
-
 # 修改获取会话消息API端点
 @app.get("/api/sessions/{session_id}/messages")
 def api_get_session_messages(session_id: str, req: Request):
@@ -136,63 +128,52 @@ async def initialize_agent(config: AgentConfigRequest):
     return current_config
 
 
-# 类似地，修改 WebSocket 路由
-@app.websocket("/api/chat/stream")
-async def chat_stream(websocket: WebSocket):
-    await websocket.accept()
-
-    try:
-        while True:
-            # 等待接收消息
-            data = await websocket.receive_text()
-            request_data = json.loads(data)
-
-            # 提取请求参数
-            session_id = request_data.get("session_id") or str(uuid.uuid4())
-            message = request_data.get("message", "")
-
-            # 获取用户标识，使用 WebSocket 连接的客户端信息
-            user_id = websocket.client.host
-
-            if not message:
-                await websocket.send_json({"error": "消息不能为空"})
-                continue
-
-            # 处理消息(流式)，传递用户标识
-            response = process_message(
-                session_id=session_id,
-                user_message=message,
-                stream=True,
-                user_id=user_id
-            )
-
-            # 发送流式响应
-            for chunk in response.get("stream_chunks", []):
-                await websocket.send_json({
-                    "session_id": session_id,
-                    "chunk": chunk
-                })
-
-            # 发送完成信号
-            await websocket.send_json({
-                "session_id": session_id,
-                "status": "complete"
-            })
-
-    except WebSocketDisconnect:
-        # 处理WebSocket断开连接
-        pass
-
-@app.get("/api/sessions/{session_id}")
-def get_session(session_id: str):
-    """获取指定会话的历史记录"""
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail="会话不存在")
-
-    return {
-        "session_id": session_id,
-        "messages": sessions[session_id]["messages"]
-    }
+# 以后再说
+# @app.websocket("/api/chat/stream")
+# async def chat_stream(websocket: WebSocket):
+#     await websocket.accept()
+#
+#     try:
+#         while True:
+#             # 等待接收消息
+#             data = await websocket.receive_text()
+#             request_data = json.loads(data)
+#
+#             # 提取请求参数
+#             session_id = request_data.get("session_id") or str(uuid.uuid4())
+#             message = request_data.get("message", "")
+#
+#             # 获取用户标识，使用 WebSocket 连接的客户端信息
+#             user_id = websocket.client.host
+#
+#             if not message:
+#                 await websocket.send_json({"error": "消息不能为空"})
+#                 continue
+#
+#             # 处理消息(流式)，传递用户标识
+#             response = process_message(
+#                 session_id=session_id,
+#                 user_message=message,
+#                 stream=True,
+#                 user_id=user_id
+#             )
+#
+#             # 发送流式响应
+#             for chunk in response.get("stream_chunks", []):
+#                 await websocket.send_json({
+#                     "session_id": session_id,
+#                     "chunk": chunk
+#                 })
+#
+#             # 发送完成信号
+#             await websocket.send_json({
+#                 "session_id": session_id,
+#                 "status": "complete"
+#             })
+#
+#     except WebSocketDisconnect:
+#         # 处理WebSocket断开连接
+#         pass
 
 
 @app.delete("/api/sessions/{session_id}")
@@ -212,12 +193,6 @@ def api_delete_session(session_id: str, req: Request):
         del sessions[combined_id]
 
     return {"status": "success" if success else "not_found"}
-
-
-@app.get("/api/config")
-def get_config():
-    """获取当前智能体配置"""
-    return get_current_agent_config()
 
 
 # 健康检查端点
