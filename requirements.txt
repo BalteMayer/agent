@@ -4,7 +4,8 @@ numpy==2.2.4
 openai==1.70.0
 pydantic==2.11.2
 pymongo==4.11.3
-spacy==3.8.4
-swarm==0.1.0
+spacy
+git+https://github.com/openai/swarm.git
 tenacity==9.0.0
 uvicorn==0.34.0
+python-dotenv==1.1.0

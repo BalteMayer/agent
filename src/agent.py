@@ -9,11 +9,20 @@ import time
 import os
 
 
-# API密钥和基础URL设置
-api_key = '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'
-base_url = 'https://api.openai.com/v1'
-# api_key = 'sk-195bd56c24a14123be57b0d94fa45e3d'
-# base_url = 'https://api.deepseek.com/v1'
+from dotenv import load_dotenv
+
+# 先清除可能存在的环境变量
+if 'OPENAI_API_KEY' in os.environ:
+    print(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
+
+# 现在加载.env文件
+load_dotenv(override=True)
+
+# 检查加载结果
+api_key = os.environ.get('OPENAI_API_KEY')
+print(f"加载后的API密钥: {api_key[:5]}..." if api_key and len(api_key) > 5 else "未找到API密钥")
+
+base_url = os.environ.get('OPENAI_BASE_URL')
 
 os.environ['OPENAI_API'] = api_key
 os.environ['OPENAI_BASE_URL'] = base_url

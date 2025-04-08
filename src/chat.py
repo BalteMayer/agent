@@ -1,5 +1,9 @@
 from src.api_loop import run_api_loop
-from agent import init_agent, client
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
+from src.agent import init_agent, client
 from src.memory import ConversationMemory
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import httpx

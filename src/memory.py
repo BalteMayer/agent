@@ -4,21 +4,29 @@ from typing import List, Dict, Any, Optional
 import json
 import os
 import time
+import sys
 
 
 class ConversationMemory:
-    """基于内存的会话记忆系统，支持上下文理解与实体识别"""
-
     def __init__(self, nlp_model="zh_core_web_sm", max_history=50):
-        """初始化会话记忆系统"""
-        # 加载NLP模型用于实体识别
+        # 判断是否为打包环境
+        if getattr(sys, 'frozen', False):
+            # 打包后模型应位于临时目录的根下
+            model_path = os.path.join(sys._MEIPASS, nlp_model)
+        else:
+            model_path = nlp_model
+
         try:
-            self.nlp = spacy.load(nlp_model)
+            self.nlp = spacy.load(model_path)
         except:
-            # 如果模型不存在，下载并加载
+            # 如果是打包环境，直接报错（无法在exe中下载）
+            if getattr(sys, 'frozen', False):
+                raise RuntimeError(f"模型 {nlp_model} 未找到，请在打包时包含模型文件！")
+            # 非打包环境则下载
             import subprocess
             subprocess.run(["python", "-m", "spacy", "download", nlp_model])
-            self.nlp = spacy.load(nlp_model)
+            self.nlp = spacy.load(model_path)
+
 
         # 会话消息记录 - 完整保存所有消息
         self.sessions = {}

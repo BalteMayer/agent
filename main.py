@@ -1,6 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
+
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from fastapi import Request
@@ -8,8 +8,12 @@ import uvicorn
 import uuid
 import json
 import time
-
-
+import os
+import sys
+import zh_core_web_sm
+sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
 
 #TODO:deepseek调用函数，绘图框架(把数据库信息存放在一个文本文件里，可以更改)，本地部署，嵌入式，其他功能，instruction改为预设(把预设信息存放在一个文本文件里，可以更改)
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
