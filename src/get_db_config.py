@@ -12,7 +12,7 @@ def get_db_config() -> Dict[str, Any]:
     """
     try:
         # 获取config.json文件的绝对路径（假设它在项目根目录）
-        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config.json')
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/config.json')
 
         # 读取config.json文件
         with open(config_path, 'r', encoding='utf-8') as f:

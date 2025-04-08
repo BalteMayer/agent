@@ -1,4 +1,6 @@
 import json
+import os
+
 import pymongo
 from datetime import datetime
 import numpy as np
@@ -582,7 +584,7 @@ class RankingCalculator(ChartCalculator):
 
 
         try:
-            with open("config.json", "r", encoding="utf-8") as f:
+            with open("data/config.json", "r", encoding="utf-8") as f:
                 db_info = json.load(f)
         except Exception:
             db_info = {}
@@ -773,7 +775,7 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     - JSON格式的计算结果
     """
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
+        with open("data/config.json", "r", encoding="utf-8") as f:
             db_info = json.load(f)
 
         db = connect_to_database(db_info)

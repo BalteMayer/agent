@@ -42,7 +42,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
     print("OK")
     print(time_info)
 
-    with open("config.json", "r", encoding="utf-8") as f:
+    with open("data/config.json", "r", encoding="utf-8") as f:
         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
 
     print("OK")
