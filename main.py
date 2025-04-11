@@ -251,6 +251,29 @@ def list_sessions(req: Request):
 
     return {"sessions": user_sessions}
 
+@app.post("/api/save-json")
+async def save_json(request: Request):
+    username = request.headers.get("X-Username")
+    if not username:
+        raise HTTPException(status_code=400, detail="Missing X-Username header")
+
+    try:
+        data = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
+
+    save_path = "/agent/data"
+    os.makedirs(save_path, exist_ok=True)
+
+    file_path = os.path.join(save_path, "config.json")
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
+
+    return {"status": "success", "saved_path": file_path}
+
 
 
 if __name__ == "__main__":

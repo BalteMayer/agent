@@ -1,6 +1,8 @@
 from src.caculator import query_and_calculate as query_and_compute
 from utils.condense import condense_msg
 from src.get_db_config import describe_db_info
+from utils.logger import logger
+
 from swarm import Swarm, Agent
 from openai import OpenAI
 import httpx
@@ -8,19 +10,18 @@ import json
 import time
 import os
 
-
 from dotenv import load_dotenv
 
 # 先清除可能存在的环境变量
 if 'OPENAI_API_KEY' in os.environ:
-    print(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
+    logger.info(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
 
 # 现在加载.env文件
 load_dotenv(override=True)
 
 # 检查加载结果
 api_key = os.environ.get('OPENAI_API_KEY')
-print(f"加载后的API密钥: {api_key[:5]}..." if api_key and len(api_key) > 5 else "未找到API密钥")
+logger.info(f"加载后的API密钥: {api_key[:5]}..." if api_key and len(api_key) > 5 else "未找到API密钥")
 
 base_url = os.environ.get('OPENAI_BASE_URL')
 
@@ -39,16 +40,16 @@ swarm_client = Swarm(client)
 
 def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
-    print("OK")
-    print(time_info)
 
-    with open("data/config.json", "r", encoding="utf-8") as f:
+    logger.info("调用")
+
+    with open("/agent/data/config.json", "r", encoding="utf-8") as f:
         db_info: str = json.dumps(json.load(f), ensure_ascii=False)
 
-    print("OK")
+
     message = condense_msg(time_info, chart_info, db_info)
-    print(message)
-    print("OK")
+
+
 
     hazuki = Agent(
         name="Tomoka",
@@ -102,10 +103,13 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         那么可以判断coll_info = "attendance", value_info = "考勤"
         同时判断chart_type适合"bar","line","pie","scatter","heatmap"里哪一种图然后填入       
         你将得到一个str类型的返回值
+        
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type
         """,
         functions=[query_and_compute]
     )
-    print("OK")
+
+    logger.info(message)
 
     start_time = time.time()
     assistant = swarm_client.run(
@@ -113,27 +117,37 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         messages = [{"role": "user", "content": message}]
     )
     end_time = time.time()
-    print(f"耗时: {end_time - start_time:.2f}秒")
+    logger.info(f"耗时: {end_time - start_time:.2f}秒")
+    logger.info(f"原始结果: {assistant}")
+    result_str = assistant.messages[1]['content']
 
 
-    print("OK")
+
+    result_str = result_str[result_str.find('{'):result_str.rfind('}')+1]
+
+
+    result_json = json.loads(result_str)
+
+    result_json = result_json["result"]
+    logger.info(f"结果: {result_json}")
+
     del hazuki
-    print("OK")
-    return assistant
+
+    return f"[{result_json}]"
 
 
 def init_agent(
         model_name: str = 'gpt-4o-mini',
         # model_name: str = 'deepseek-chat',
 ):
-    print('agent init')
+
     # 智能体定义
     return Agent(
         name='Agent Main',
         model=model_name,
         instructions=
         """
-        你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。
+        你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。你严格遵循我的指示，任何函数返回值都会原封不动地返回给用户。
         
         当用户需要你进行数据分析时，请考虑调用函数。如果没有分析类的需求请不要调用函数。
         transmit_refined_params_and_db_info(time_info: str, chart_info: str)
@@ -142,17 +156,30 @@ def init_agent(
             示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
             那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
             也就是time_info = "2025年4月", chart_info = "考勤情况"
+            如果用户指定了图表类型，比如说“2024年3月考勤情况，画成折线图”,
+            那么chart_info = "考勤情况,折线图"
             把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
             
             如果你判断没有索引信息，那么time_info = "None"
             注意不是NoneType，而是字符串"None"
+            
+            最后你将获得一个str类型的返回值，你不能改动它，而是原封不动地返回给用户，同时根据其内容做一些专业的数据分析指导，期望在100字以内，20字以上
+            这个返回值就是长这个结构的东西[{}]，把它原封不动发给用户，不能自己总结。
+            注意，不论发生什么，返回值必须提供
+            
+            你不被允许自己总结
+            比如
+            返回值为{'chart_type': 'bar', 'categories': ['出勤', '迟到', '缺勤', '请假'], 'values': [23, 3, 1, 3], 'statistics': {'mean': 7.5, 'median': 3.0, 'max': 23, 'min': 1, 'std': 8.986100377805714, 'variance': 80.75}}
+            你不能说
+             "结果显示2024年3月的考勤情况，条形图信息如下：出勤23天，迟到3天，缺勤1天，请假3天。可以使用这些数据在Excel等工具中创建饼状图
+             ，帮助更直观地了解不同考勤类别所占比例。需要更多帮助请告诉我！"
+            因为这样没有提供返回值给用户
             
         当用户需要知道数据库的基本信息时，请考虑调用函数
         比如”请告诉我数据库信息“
         describe_db_info -> str
             这个函数用于获取数据库的基本信息，返回值是一个str类型的描述信息
             你需要根据这个信息把数据库基本信息以更语义化和自然的方式描述给用户
-            返回值不能展示给用户
         
         
         """,

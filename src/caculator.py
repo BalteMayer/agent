@@ -7,7 +7,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Union, Optional
 from utils.data_helper import enrich_data_with_relations, group_and_aggregate, calculate_derived_metrics
-
+from utils.logger import logger
 
 class ChartCalculator(ABC):
     """基础图表计算器抽象类"""
@@ -52,6 +52,7 @@ class BarChartCalculator(ChartCalculator):
         }
 
         result = {
+            "chart_type": "bar",
             "categories": categories,
             "values": values,
             "statistics": stats
@@ -120,6 +121,7 @@ class LineChartCalculator(ChartCalculator):
             moving_avg = values
 
         result = {
+            "chart_type": "line",
             "x_axis": time_series,
             "values": values,
             "trend": float(trend),
@@ -155,6 +157,7 @@ class PieChartCalculator(ChartCalculator):
         percentages = [round((value / total) * 100, 2) if total > 0 else 0 for value in values]
 
         result = {
+            "chart_type": "pie",
             "labels": labels,
             "values": values,
             "percentages": percentages
@@ -229,6 +232,7 @@ class ScatterChartCalculator(ChartCalculator):
             regression_line = []
 
         result = {
+            "chart_type": "scatter",
             "x": x_values,
             "y": y_values,
             "x_field": x_field,
@@ -313,6 +317,7 @@ class HeatMapCalculator(ChartCalculator):
                     continue
 
         result = {
+            "chart_type": "heatmap",
             "x_labels": x_values,
             "y_labels": y_values,
             "x_field": x_field,
@@ -321,6 +326,8 @@ class HeatMapCalculator(ChartCalculator):
             "max_value": float(np.max(matrix)),
             "min_value": float(np.min(matrix))
         }
+
+        logger.info(f"热力图计算结果: {result}")
 
         return result
 
@@ -437,6 +444,7 @@ class YoYMoMCalculator(ChartCalculator):
 
 
         result = {
+            "chart_type": "yoy_mom",
             "current_period": {
                 "period": current_period,
                 "value": current_data["sum"] if current_data["sum"] > 0 else current_data["count"],
@@ -584,7 +592,7 @@ class RankingCalculator(ChartCalculator):
 
 
         try:
-            with open("data/config.json", "r", encoding="utf-8") as f:
+            with open("/agent/data/config.json", "r", encoding="utf-8") as f:
                 db_info = json.load(f)
         except Exception:
             db_info = {}
@@ -680,6 +688,7 @@ class RankingCalculator(ChartCalculator):
         }
 
         return {
+            "chart_type": "ranking",
             "ranks": result_data,
             "group_by": group_by,
             "value_type": value_type,
@@ -774,8 +783,11 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     返回:
     - JSON格式的计算结果
     """
+
+    logger.info(f"开始查询数据: {coll_info}, 起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
+
     try:
-        with open("data/config.json", "r", encoding="utf-8") as f:
+        with open("/agent/data/config.json", "r", encoding="utf-8") as f:
             db_info = json.load(f)
 
         db = connect_to_database(db_info)
@@ -809,7 +821,7 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
             "result": calculation_result
         }
 
-        return json.dumps(result, ensure_ascii=False)
+        return f"[{chart_type}{json.dumps(result, ensure_ascii=False)}]"
 
     except Exception as e:
         error_result = {

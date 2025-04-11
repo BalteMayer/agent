@@ -42,7 +42,7 @@ def get_or_create_session(session_id, user_id):
 # 添加重试装饰器，针对网络相关错误进行重试
 @retry(
     stop=stop_after_attempt(3),  # 最多重试3次
-    wait=wait_exponential(multiplier=1, min=2, max=30),  # 指数退避重试等待
+    wait=wait_exponential(multiplier=1, min=2, max=60),  # 指数退避重试等待
     retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectTimeout, httpx.ReadTimeout))  # 只对超时错误重试
 )
 def call_api_with_retry(client, agent, messages, stream):
