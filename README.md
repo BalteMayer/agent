@@ -39,7 +39,10 @@ curl -X GET http://localhost:8001/health
 ##### 响应如下
 ```json
 {
-  "status": "healthy"
+  "code": 200,
+  "data": {
+    "status": "healthy",
+  }
 }
 ```
 
@@ -74,6 +77,62 @@ curl -X DELETE http://localhost:8001/api/sessions/$[SESSION_ID] \
 { "status": "success" } //成功删除
 { "status": "not_found" } //未找到
 ```
+
+#### 获取会话历史
+```bash
+curl --location 'http://localhost:8001/api/sessions' \
+--header 'Content-Type: application/json' \
+--header 'user_id: user' \
+--header 'session_id: 202504080000'
+```
+##### 响应如下
+```json
+{
+    "code": 200,
+    "data": {
+        "session_id": "202504080000",
+        "messages": [
+            {
+                "role": "user",
+                "content": "帮我分析jlu分组情况"
+            },
+            {
+                "role": "assistant",
+                "content": "请问您有指定的时间或索引信息吗？这样我可以更好地帮助您进行分析。"
+            },
+            {
+                "role": "user",
+                "content": "帮我分析jlu分组情况"
+            },
+            {
+                "role": "assistant",
+                "content": "[{'chart_type': 'bar', 'categories': ['视觉组', '机械组', '电控组', '运营组', 'AI组', '软件组'], 'values': [47, 43, 126, 36, 36, 24], 'statistics': {'mean': 52.0, 'median': 39.5, 'max': 126, 'min': 24, 'std': 33.85754470326124, 'variance': 1146.3333333333333}}]\n\n根据分析，jlu分组情况的数据已显示在上方。不同组的人数分布情况可以帮助您针对性地进行资源配置和管理策略调整。"
+            },
+            {
+                "role": "user",
+                "content": "帮我分析jlu分组情况"
+            },
+            {
+                "role": "assistant",
+                "content": "请问您有指定的时间或索引信息吗？这样我可以更好地帮助您进行分析。"
+            },
+            {
+                "role": "user",
+                "content": "帮我分析jlu分组情况，无索引"
+            },
+            {
+                "role": "assistant",
+                "content": "[{'chart_type': 'bar', 'categories': ['视觉组', '机械组', '电控组', '运营组', 'AI组', '软件组'], 'values': [47, 43, 126, 36, 36, 24], 'statistics': {'mean': 52.0, 'median': 39.5, 'max': 126, 'min': 24, 'std': 33.85754470326124, 'variance': 1146.3333333333333}}]\n\n分析的结果显示了各个分组的人数分布及统计数据。根据这些信息，可以为每个组配置合适的资源和任务。"
+            }
+        ],
+        "last_modified": null,
+        "message_count": 8,
+        "timestamp": "2025-04-12 19:23:40",
+        "user": "user"
+    }
+}
+```
+
 </div>
 
 ## <span style="color:LightCoral">数据计算的请求内容与响应内容</span>

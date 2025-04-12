@@ -59,6 +59,8 @@ class ChatResponse(BaseModel):
 
 
 
+def get_current_timestamp():
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
 # 修改现有的聊天API端点
@@ -66,12 +68,13 @@ class ChatResponse(BaseModel):
 def chat(request: ChatRequest, req: Request):
     """处理聊天请求"""
     time_start = time.time()
-    try:
-        # 获取用户IP或其他标识，优先使用X-Forwarded-For头信息
-        user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    current_timestamp = get_current_timestamp()
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    session_id = request.session_id if request.session_id else "default"
 
-        # 确保使用固定的会话ID来保持状态
-        session_id = request.session_id if request.session_id else "default"
+    try:
+
+        combined_id = f"{user_id}_{session_id}"
 
         # 调用聊天处理函数
         response = process_message(
@@ -83,12 +86,17 @@ def chat(request: ChatRequest, req: Request):
 
         # 检查是否有错误字段
         if response is not None and "error" in response:
-            # 返回错误响应，但仍然提供用户友好的信息
             return {
-                "response": "抱歉，服务暂时响应超时，请稍后再试...",
-                "session_id": session_id,
-                "error": response["error"]
+                "code": 500,
+                "data": {
+                    "error": response["error"],
+                    "message": "抱歉,服务暂时响应超时,请稍后再试...",
+                    "session_id": session_id,
+                    "timestamp": current_timestamp,
+                    "user": user_id
+                }
             }
+
 
         # 返回正常响应
         time_end = time.time()
@@ -102,24 +110,41 @@ def chat(request: ChatRequest, req: Request):
             assistant_message = "[系统错误：未能正确解析助手回复内容]"
 
         return {
-            "response": assistant_message,
-            "session_id": session_id
+            "code": 200,
+            "data": {
+                "response": assistant_message,
+                "session_id": session_id
+            }
         }
+
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(f"处理聊天请求时出错: {str(e)}\n{error_detail}")
+        logger.info(f"处理聊天请求时出错: {str(e)}\n{error_detail}")
 
         # 提供用户友好的错误信息
         if "timeout" in str(e).lower():
             return {
-                "response": "抱歉，服务暂时响应超时，请稍后再试...",
-                "session_id": session_id,
-                "error": str(e)
+                "code": 504,  # Gateway Timeout
+                "data": {
+                    "error": str(e),
+                    "message": "抱歉，服务暂时响应超时，请稍后再试...",
+                    "session_id": session_id,
+                    "timestamp": current_timestamp,
+                    "user": user_id
+                }
             }
         else:
-            raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
-
+            return {
+                "code": 500,  # Internal Server Error
+                "data": {
+                    "error": str(e),
+                    "message": "处理请求时出错",
+                    "session_id": session_id,
+                    "timestamp": current_timestamp,
+                    "user": user_id
+                }
+            }
 
 # 修改获取会话消息API端点
 @app.get("/api/sessions/{session_id}/messages")
@@ -194,36 +219,84 @@ async def initialize_agent(config: AgentConfigRequest):
 @app.delete("/api/sessions/{session_id}")
 def api_delete_session(session_id: str, req: Request):
     """API端点：删除指定的会话及其文件"""
-    user_id = req.headers.get("X-Forwarded-For", req.client.host)
-    combined_id = f"{user_id}:{session_id}"
+    current_timestamp = get_current_timestamp()
+    user_id = req.headers.get("X-Forwarded-For", "BalteMayer")
+    combined_id = f"{user_id}_{session_id}"
 
-    # 导入会话管理器
-    from src.chat import memory_manager, sessions
+    try:
+        # 导入会话管理器
+        from src.chat import memory_manager, sessions
 
-    # 删除会话及其文件
-    success = memory_manager.delete_session(combined_id)
+        # 删除会话及其文件
+        success = memory_manager.delete_session(combined_id)
 
-    # 如果在会话状态字典中也存在该会话，删除它
-    if combined_id in sessions:
-        del sessions[combined_id]
+        # 如果在会话状态字典中也存在该会话，删除它
+        if combined_id in sessions:
+            del sessions[combined_id]
 
-    return {"status": "success" if success else "not_found"}
+        if success:
+            return {
+                "code": 200,
+                "data": {
+                    "status": "success",
+                    "message": "会话已成功删除",
+                    "session_id": session_id,
+                    "timestamp": current_timestamp,
+                    "user": user_id
+                }
+            }
+        else:
+            return {
+                "code": 404,
+                "data": {
+                    "status": "not_found",
+                    "message": "未找到指定会话",
+                    "session_id": session_id,
+                    "timestamp": current_timestamp,
+                    "user": user_id
+                }
+            }
+    except Exception as e:
+        return {
+            "code": 500,
+            "data": {
+                "error": str(e),
+                "message": "删除会话失败",
+                "session_id": session_id,
+                "timestamp": current_timestamp,
+                "user": user_id
+            }
+        }
 
 
 # 健康检查端点
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def health_check(req: Request):
+
+    return {
+        "code": 200,
+        "data": {
+            "status": "healthy",
+        }
+    }
 
 
 @app.get("/api/sessions")
 def list_sessions(req: Request):
     """获取指定会话的完整记忆"""
-    user_id = req.headers.get("user_id")
+    current_timestamp = get_current_timestamp()
+    user_id = req.headers.get("user_id", "BalteMayer")
     session_id = req.headers.get("session_id")
 
-    if not user_id or not session_id:
-        return {"error": "请求头中必须包含 user_id 和 session_id"}
+    if not session_id:
+        return {
+            "code": 400,
+            "data": {
+                "error": "请求头中必须包含 session_id",
+                "timestamp": current_timestamp,
+                "user": user_id
+            }
+        }
 
     # 构造完整的会话ID (user_id_session_id)
     combined_id = f"{user_id}_{session_id}"
@@ -241,14 +314,20 @@ def list_sessions(req: Request):
         session_info = next((s for s in sessions_info if s['session_id'] == combined_id), None)
 
         return {
-            "session_id": session_id,
-            "data": session_data,
-            "last_modified": session_info['last_modified'] if session_info else None,
-            "message_count": len(session_data) if session_data else 0
+            "code": 200,
+            "data": {
+                "messages": session_data,
+            }
         }
     except Exception as e:
-        return {"error": f"获取会话数据失败: {str(e)}"}
-
+        return {
+            "code": 500,
+            "data": {
+                "error": f"获取会话数据失败: {str(e)}",
+                "timestamp": current_timestamp,
+                "user": user_id
+            }
+        }
 
 
 if __name__ == "__main__":

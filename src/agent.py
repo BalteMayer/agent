@@ -103,8 +103,6 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         - "pie": 饼图
         - "scatter": 散点图
         - "heatmap": 热力图
-        - "yoy_mom": 同比环比分析
-        - "multi_field": 多字段组合分析
         - "ranking": 排名分析
         
         coll_info: str的信息是用户需要进行数据分析的时需要绘图的对象所在的collection的名称，你需要将此参数转化为合适的coll_info: str值
