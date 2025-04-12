@@ -142,11 +142,29 @@ class LineChartCalculator(ChartCalculator):
 class PieChartCalculator(ChartCalculator):
     def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
         """计算饼图所需的数据"""
+
+        logger.info(f"开始计算饼图数据，输入数据量: {len(data)}, 值类型: {value_type}")
         result = {}
         labels = []
         values = []
 
         # 根据value_type进行分组计算
+        # 记录数据中是否包含value_type字段
+        if data and len(data) > 0:
+            sample_keys = list(data[0].keys())
+            logger.info(f"数据样本包含的字段: {sample_keys}")
+            if value_type not in sample_keys:
+                logger.error(f"数据中不存在字段 {value_type}，可用字段为: {sample_keys}")
+                return {
+                    "chart_type": "pie",
+                    "error": f"字段 {value_type} 不存在",
+                    "available_fields": sample_keys,
+                    "labels": [],
+                    "values": [],
+                    "percentages": []
+                }
+
+
         value_counts = {}
         for item in data:
             if value_type in item:
@@ -154,6 +172,10 @@ class PieChartCalculator(ChartCalculator):
                 if category not in value_counts:
                     value_counts[category] = 0
                 value_counts[category] += 1
+            else:
+                logger.warning(f"跳过一条不包含字段 {value_type} 的数据")
+
+        logger.info(f"分组统计结果: {value_counts}")
 
         for category, count in value_counts.items():
             labels.append(category)
@@ -161,6 +183,7 @@ class PieChartCalculator(ChartCalculator):
 
         # 计算百分比
         total = sum(values)
+        logger.info(f"总计数: {total}")
         percentages = [round((value / total) * 100, 2) if total > 0 else 0 for value in values]
 
         result = {
@@ -169,6 +192,7 @@ class PieChartCalculator(ChartCalculator):
             "values": values,
             "percentages": percentages
         }
+        logger.info(f"饼图计算完成: {len(labels)} 个类别")
 
         return result
 
@@ -824,16 +848,21 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
             mysql_info = db_info
 
         # 连接到MySQL数据库
+        logger.info("尝试连接MySQL数据库...")
         connection = connect_to_mysql(mysql_info)
-        logger.info(f"成功连接到MySQL数据库: {mysql_info}")
+        logger.info(f"成功连接到MySQL数据库: {mysql_info.get('host')}:{mysql_info.get('port')}")
 
 
         date_field = get_date_field(connection, table_name)
+        logger.info(f"使用日期字段: {date_field}")
 
         # 查询数据
+        logger.info(f"查询表 {table_name} 的数据...")
         data = query_data(connection, table_name, start_index, last_index, date_field)
+        logger.info(f"查询完成，获取到 {len(data)} 条记录")
 
         # 根据图表类型执行计算
+        logger.info(f"开始计算 {chart_type} 类型的图表数据...")
         if chart_type.lower() == "ranking":
             calculator = RankingCalculator()
             calculation_result = calculator.calculate(data, value_type, limit, group_by, ascending)
@@ -847,6 +876,7 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
 
         # 关闭连接
         connection.close()
+        logger.info("数据库连接已关闭")
 
         # 构建结果
         result = {
@@ -860,13 +890,14 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
             "data_count": len(data),
             "result": calculation_result
         }
-
+        logger.info(f"计算完成，返回结果")
         return f"[{chart_type}{json.dumps(result, ensure_ascii=False)}]"
 
     except Exception as e:
         # 确保任何异常情况下都能关闭连接
         if 'connection' in locals():
             connection.close()
+            logger.info("异常情况下关闭数据库连接")
 
         error_result = {
             "error": str(e),

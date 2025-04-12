@@ -1,6 +1,6 @@
 import json
 import os
-import mysql.connector
+import pymysql
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 from utils import logger
@@ -8,7 +8,7 @@ import sys
 
 
 
-def connect_to_mysql(db_info: Dict[str, Any]) -> mysql.connector.connection.MySQLConnection:
+def connect_to_mysql(db_info: Dict[str, Any]) -> pymysql.connections.Connection:
     """连接到MySQL数据库"""
     # 检查是否有mysql专用配置
     if "mysql" in db_info:
@@ -23,7 +23,7 @@ def connect_to_mysql(db_info: Dict[str, Any]) -> mysql.connector.connection.MySQ
     database_name = mysql_info.get("database", "")
 
     try:
-        connection = mysql.connector.connect(
+        connection = pymysql.connect(
             host=host,
             port=port,
             user=username,
@@ -31,7 +31,7 @@ def connect_to_mysql(db_info: Dict[str, Any]) -> mysql.connector.connection.MySQ
             database=database_name
         )
         return connection
-    except mysql.connector.Error as err:
+    except pymysql.错误 as err:
         print(f"数据库连接错误: {err}")
         raise
 
@@ -71,9 +71,9 @@ def load_db_config(config_path: Optional[str] = None) -> Dict[str, Any]:
                 break
 
         if config_path is None:
-            # 如果还找不到，给出详细错误信息帮助调试
+            # 如果还找不到,给出详细错误信息帮助调试
             searched_paths = [os.path.join(bp, "data", "config.json") for bp in base_paths]
-            error_msg = f"找不到配置文件config.json。已尝试以下路径:\n" + "\n".join(searched_paths)
+            error_msg = f"找不到配置文件config.json.已尝试以下路径:\n" + "\n".join(searched_paths)
             raise FileNotFoundError(error_msg)
         logger.info(f"配置文件路径为{config_path}")
     try:
@@ -92,18 +92,18 @@ def enrich_data_with_relations(
         db_info: Optional[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
     """
-    通用数据关联函数，用于将主数据集与辅助数据集关联（MySQL版本）
+    通用数据关联函数,用于将主数据集与辅助数据集关联（MySQL版本）
 
     参数:
     - primary_data: 主数据列表
-    - join_config: 关联配置，格式为:
+    - join_config: 关联配置,格式为:
         {
             "auxiliary_table": "表名称", # 辅助数据表名
             "primary_key": "主数据关联字段",     # 主数据中的关联键
             "auxiliary_key": "辅助数据关联字段", # 辅助数据中的关联键
             "fields_to_include": ["字段1", "字段2"] # 要包含的辅助数据字段列表
         }
-    - db_info: 数据库连接信息，如果为None则尝试加载配置
+    - db_info: 数据库连接信息,如果为None则尝试加载配置
 
     返回:
     - 增强后的数据列表
@@ -111,7 +111,7 @@ def enrich_data_with_relations(
     if not primary_data or not join_config:
         return primary_data
 
-    # 如果没有提供db_info，尝试加载配置
+    # 如果没有提供db_info,尝试加载配置
     if db_info is None:
         try:
             db_info = load_db_config()
@@ -133,7 +133,7 @@ def enrich_data_with_relations(
     try:
         # 连接数据库
         connection = connect_to_mysql(db_info)
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
 
         # 获取唯一的主键值列表
         primary_values = list(set(item[primary_key] for item in primary_data if primary_key in item))
@@ -179,14 +179,14 @@ def enrich_data_with_relations(
         enriched_data = []
         for item in primary_data:
             if primary_key in item and item[primary_key] in auxiliary_map:
-                # 创建新记录，包含原始数据
+                # 创建新记录,包含原始数据
                 new_item = item.copy()
                 # 添加辅助数据的字段
                 for field, value in auxiliary_map[item[primary_key]].items():
                     new_item[field] = value
                 enriched_data.append(new_item)
             else:
-                # 如果找不到匹配的辅助数据，保留原始记录
+                # 如果找不到匹配的辅助数据,保留原始记录
                 enriched_data.append(item)
 
         return enriched_data
@@ -214,7 +214,7 @@ def group_and_aggregate(
     - data: 数据列表
     - group_by: 分组字段
     - value_field: 值字段
-    - aggregations: 聚合操作列表，格式为:
+    - aggregations: 聚合操作列表,格式为:
         [
             {
                 "type": "count", # 聚合类型: count, sum, avg, min, max
@@ -312,7 +312,7 @@ def calculate_derived_metrics(
 
     参数:
     - data: 数据列表
-    - derived_metrics: 派生指标配置列表，格式为:
+    - derived_metrics: 派生指标配置列表,格式为:
         [
             {
                 "output": "输出字段名", # 结果字段名
@@ -375,7 +375,7 @@ def calculate_derived_metrics(
 
 
 def query_data(
-        connection: mysql.connector.connection.MySQLConnection,
+        connection: pymysql.connections.Connection,
         table_name: str,
         start_index: Optional[str] = None,
         last_index: Optional[str] = None,
@@ -394,12 +394,12 @@ def query_data(
     返回:
     - 查询结果列表
     """
-    cursor = connection.cursor(dictionary=True)
+    cursor = connection.cursor(pymysql.cursors.DictCursor)
 
     try:
         # 确保表名存在
         cursor.execute("SHOW TABLES")
-        tables = [t[f"Tables_in_{connection.database}"] for t in cursor.fetchall()]
+        tables = [t[f"Tables_in_{connection.db.decode()}"] for t in cursor.fetchall()]
 
         if table_name not in tables:
             print(f"表 {table_name} 不存在于数据库中")
@@ -413,7 +413,7 @@ def query_data(
         query = f"SELECT * FROM {table_name}"
         params = []
 
-        # 如果提供了日期范围且日期字段存在，添加WHERE子句
+        # 如果提供了日期范围且日期字段存在,添加WHERE子句
         if start_index and last_index and date_field in fields:
             query += f" WHERE {date_field} BETWEEN %s AND %s"
             params = [start_index, last_index]
@@ -438,7 +438,7 @@ def query_data(
 
         return result
 
-    except mysql.connector.Error as err:
+    except pymysql.Error as err:
         print(f"查询数据时发生错误: {err}")
         return []
 

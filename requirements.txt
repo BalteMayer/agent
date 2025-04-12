@@ -9,3 +9,4 @@ git+https://github.com/openai/swarm.git
 tenacity==9.0.0
 uvicorn==0.34.0
 python-dotenv==1.1.0
+pymysql==1.1.1

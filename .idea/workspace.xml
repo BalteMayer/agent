@@ -6,10 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="mysql -port">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/mysql_caculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/mysql_caculator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/condense.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/condense.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/mysql_data_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/mysql_data_helper.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -75,7 +76,7 @@
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/pythonProject/agent/sample&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/pythonProject/agent/utils&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -88,11 +89,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\pythonProject\agent\utils" />
       <recent name="D:\pythonProject\agent\sample" />
       <recent name="D:\pythonProject\agent\data" />
       <recent name="D:\pythonProject\agent\data\user1" />
       <recent name="D:\pythonProject\agent\models" />
-      <recent name="D:\pythonProject\agent" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\pythonProject\agent\sample" />
@@ -218,7 +219,9 @@
       <workItem from="1744353417425" duration="16931000" />
       <workItem from="1744417376656" duration="14796000" />
       <workItem from="1744437215587" duration="78000" />
-      <workItem from="1744437300929" duration="1549000" />
+      <workItem from="1744437300929" duration="7972000" />
+      <workItem from="1744458757991" duration="2598000" />
+      <workItem from="1744474582983" duration="3988000" />
     </task>
     <task id="LOCAL-00001" summary="first commmit">
       <option name="closed" value="true" />
@@ -516,7 +519,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744429626049</updated>
     </task>
-    <option name="localTasksCounter" value="38" />
+    <task id="LOCAL-00038" summary="mysql -port">
+      <option name="closed" value="true" />
+      <created>1744439193416</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1744439193416</updated>
+    </task>
+    <option name="localTasksCounter" value="39" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -674,7 +685,7 @@
     <SUITE FILE_PATH="coverage/main_go$aaa.coverage" NAME="aaa 覆盖结果" MODIFIED="1744428625938" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/asset" />
     <SUITE FILE_PATH="coverage/agent$main.coverage" NAME="main 覆盖结果" MODIFIED="1742312692780" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$chart.coverage" NAME="chart 覆盖结果" MODIFIED="1742889684011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
-    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1744437671639" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1744477383551" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/agent$hallo.coverage" NAME="hallo 覆盖结果" MODIFIED="1742267787670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$mongodb_generator.coverage" NAME="mongodb_generator 覆盖结果" MODIFIED="1743091689234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
     <SUITE FILE_PATH="coverage/main_go$mysql_generator.coverage" NAME="mysql_generator 覆盖结果" MODIFIED="1744429210809" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/sample" />

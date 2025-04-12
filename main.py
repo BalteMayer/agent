@@ -218,49 +218,36 @@ def health_check():
 
 @app.get("/api/sessions")
 def list_sessions(req: Request):
-    """获取当前用户的所有可用会话列表"""
-    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+    """获取指定会话的完整记忆"""
+    user_id = req.headers.get("user_id")
+    session_id = req.headers.get("session_id")
+
+    if not user_id or not session_id:
+        return {"error": "请求头中必须包含 user_id 和 session_id"}
+
+    # 构造完整的会话ID (user_id_session_id)
+    combined_id = f"{user_id}_{session_id}"
 
     # 导入会话管理器
     from src.chat import memory_manager
 
-    # 获取所有可用会话
-    all_sessions = memory_manager.list_available_sessions()
+    # 获取会话数据
+    try:
+        # 获取完整的会话消息
+        session_data = memory_manager.get_messages(combined_id)
 
-    # 筛选属于当前用户的会话
-    user_sessions = []
-    for session in all_sessions:
-        if session['session_id'].startswith(f"{user_id}:"):
-            # 提取实际的会话ID（去除用户ID前缀）
-            actual_session_id = session['session_id'].split(':', 1)[1] if ':' in session['session_id'] else session[
-                'session_id']
+        # 获取会话元数据
+        sessions_info = memory_manager.list_available_sessions()
+        session_info = next((s for s in sessions_info if s['session_id'] == combined_id), None)
 
-            # 加载会话数据以获取最后消息
-            session_data = memory_manager.get_messages(session['session_id'])
-
-            # 提取最后的用户消息和助手回复
-            last_user_message = ""
-            last_assistant_message = ""
-            for msg in reversed(session_data):
-                if msg["role"] == "user" and not last_user_message:
-                    last_user_message = msg["content"]
-                elif msg["role"] == "assistant" and not last_assistant_message:
-                    last_assistant_message = msg["content"]
-
-                if last_user_message and last_assistant_message:
-                    break
-
-            user_sessions.append({
-                "session_id": actual_session_id,
-                "last_updated": session['last_modified'],
-                "last_updated_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(session['last_modified'])),
-                "message_count": len(session_data),
-                "last_user_message": last_user_message[:50] + ("..." if len(last_user_message) > 50 else ""),
-                "last_assistant_message": last_assistant_message[:50] + (
-                    "..." if len(last_assistant_message) > 50 else "")
-            })
-
-    return {"sessions": user_sessions}
+        return {
+            "session_id": session_id,
+            "data": session_data,
+            "last_modified": session_info['last_modified'] if session_info else None,
+            "message_count": len(session_data) if session_data else 0
+        }
+    except Exception as e:
+        return {"error": f"获取会话数据失败: {str(e)}"}
 
 
 

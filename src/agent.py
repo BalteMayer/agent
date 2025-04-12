@@ -57,7 +57,7 @@ swarm_client = Swarm(client)
 
 
 
-def transmit_refined_params_and_db_info(time_info: str, chart_info: str, database_type: str=None):
+def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
 
     logger.info("called")
@@ -71,7 +71,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str, databas
         return "配置文件未找到"
 
 
-    message = condense_msg(time_info, chart_info, database_type, db_info)
+    message = condense_msg(time_info, chart_info, db_info)
 
 
 
@@ -81,6 +81,8 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str, databas
         instructions=
         """
         你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息判断是mysql还是mongodb，然后调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
+        至于是什么数据库你通过db_info的信息来判断，mysql应该会在很靠前的位置明确说是mysql
+        
         mongodb_caculator(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
         这个函数用于从数据库里获取数据，然后把数据进行一些统计处理，最后返回str类型的分析结果，用于提供给前端绘图。
         
@@ -196,18 +198,15 @@ def init_agent(
         You're only allowed to call the function once
         
         当用户需要你进行数据分析时，请考虑调用函数。如果没有分析类的需求请不要调用函数。
-        transmit_refined_params_and_db_info(time_info: str, chart_info: str, database_type: str)
+        transmit_refined_params_and_db_info(time_info: str, chart_info: str)
             time_info: 时间或者索引信息
             chart_info: 待分析对象信息
-            database_type: 数据库类型，是mongodb还是mysql还是别的什么
-            示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况/mysql”
+            示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
             那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
             也就是time_info = "2025年4月", chart_info = "考勤情况"
             如果用户指定了图表类型，比如说“2024年3月考勤情况，画成折线图”,
             那么chart_info = "考勤情况,折线图"
-            database_type = “mysql”，
-            如果是“请为我统计分析一下2025年4月的考勤情况/mongodb”
-            那就是database_type = “mongodb”
+
             把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
             
             如果你判断没有索引信息，那么time_info = "None"
