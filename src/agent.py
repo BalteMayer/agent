@@ -149,7 +149,6 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str, databas
         functions=[mongodb_caculator,mysql_caculator]
     )
 
-    logger.info(message)
 
     start_time = time.time()
     assistant = swarm_client.run(
@@ -158,7 +157,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str, databas
     )
     end_time = time.time()
     logger.info(f"耗时: {end_time - start_time:.2f}秒")
-    logger.info(f"原始结果: {assistant}")
+
     result_str = assistant.messages[1]['content']
 
 

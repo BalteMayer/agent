@@ -3,6 +3,8 @@ import os
 import mysql.connector
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional
+from utils import logger
+import sys
 
 
 
@@ -34,25 +36,49 @@ def connect_to_mysql(db_info: Dict[str, Any]) -> mysql.connector.connection.MySQ
         raise
 
 
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+
 def load_db_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """加载数据库配置"""
-    if config_path is None:
-        # 尝试默认路径
-        config_paths = [
-            "/agent/data/mongodb_config.json",  # 原始路径
-            "data/mongodb_config.json",  # 相对路径
-            "mongodb_config.json"  # 当前目录
-        ]
+    import sys
 
-        for path in config_paths:
-            if os.path.exists(path):
-                config_path = path
+    if config_path is None:
+        # 尝试不同的基础路径策略
+        base_paths = []
+
+        # 策略1: 打包环境 - 使用可执行文件所在目录
+        if getattr(sys, 'frozen', False):
+            base_paths.append(os.path.dirname(sys.executable))
+
+        # 策略2: 开发环境 - 从当前文件位置向上导航
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # src目录的父目录应该是项目根目录
+        base_paths.append(os.path.dirname(os.path.dirname(current_dir)))
+
+        # 策略3: 使用当前工作目录
+        base_paths.append(os.getcwd())
+
+        # 查找配置文件
+        for base_path in base_paths:
+            test_path = os.path.join(base_path, "data", "config.json")
+            if os.path.exists(test_path):
+                config_path = test_path
                 break
 
         if config_path is None:
-            raise FileNotFoundError("找不到配置文件")
-
+            # 如果还找不到，给出详细错误信息帮助调试
+            searched_paths = [os.path.join(bp, "data", "config.json") for bp in base_paths]
+            error_msg = f"找不到配置文件config.json。已尝试以下路径:\n" + "\n".join(searched_paths)
+            raise FileNotFoundError(error_msg)
+        logger.info(f"配置文件路径为{config_path}")
     try:
+        config_path = os.path.join(get_base_path(), 'data', 'config.json')
+        logger.info(f"配置文件路径为{config_path}")
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:

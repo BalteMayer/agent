@@ -694,6 +694,98 @@ class ChartCalculatorFactory:
         return calculator_class()
 
 
+def get_date_field(connection, table_name):
+    """
+    动态确定表中最适合作为日期或索引字段的列名
+
+    参数:
+    - connection: 数据库连接
+    - table_name: 表名
+
+    返回:
+    - 适合用于查询的字段名
+    """
+    if not connection:
+        return None
+
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        # 1. 获取表字段信息
+        cursor.execute(f"DESCRIBE `{table_name}`")
+        columns = cursor.fetchall()
+
+        # 存储候选字段和其优先级
+        candidates = []
+
+        for column in columns:
+            column_name = column[0]
+            column_type = column[1].lower() if len(column) > 1 else ""
+
+            # 检查字段类型是否为日期类型
+            if any(date_type in column_type for date_type in ['date', 'time', 'datetime', 'timestamp']):
+                candidates.append((column_name, 3))
+                continue
+
+            # 检查字段名是否包含日期相关关键词
+            if any(keyword in column_name.lower() for keyword in
+                   ['date', 'time', 'day', 'created', 'updated', '日期', '时间']):
+                candidates.append((column_name, 2))
+                continue
+
+            # 字段是主键或索引
+            is_key = column[3].lower() if len(column) > 3 else ""
+            if is_key == 'pri' or is_key == 'uni' or is_key == 'mul':
+                # 主键但不是ID类型
+                if is_key == 'pri' and not ('id' == column_name.lower() or column_name.lower().endswith('_id')):
+                    candidates.append((column_name, 1))
+
+        # 2. 如果存在候选字段，按优先级返回
+        if candidates:
+            # 按优先级排序
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            return candidates[0][0]
+
+        # 3. 如果没有找到候选字段，尝试查询一行数据，分析字段类型
+        cursor.execute(f"SELECT * FROM `{table_name}` LIMIT 1")
+        row = cursor.fetchone()
+        if row:
+            column_names = [desc[0] for desc in cursor.description]
+
+            for i, value in enumerate(row):
+                # 如果是日期时间类型值
+                if isinstance(value, (datetime, date)):
+                    return column_names[i]
+                # 如果是字符串且看起来像日期
+                elif isinstance(value, str) and (
+                        ('-' in value and value.count('-') >= 2) or
+                        ('/' in value and value.count('/') >= 2)
+                ):
+                    return column_names[i]
+
+        # 4. 回退方案：寻找看起来像排序字段的列
+        for column in columns:
+            column_name = column[0]
+            # 字段名包含序号相关关键词
+            if any(keyword in column_name.lower() for keyword in ['order', 'seq', 'num', 'no', '序号', '编号']):
+                return column_name
+
+        # 5. 最后的回退方案：返回第一个非ID的字段，或者主键
+        for column in columns:
+            if 'id' != column[0].lower() and not column[0].lower().endswith('_id'):
+                return column[0]
+
+        # 实在找不到，返回第一个字段
+        return columns[0][0] if columns else None
+
+    except Exception as e:
+        logger.error(f"获取日期字段时出错: {e}")
+        return None
+    finally:
+        if cursor:
+            cursor.close()
+
 def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[str] = None,
                         value_type: str = None, table_name: str = None, chart_type: str = None,
                         group_by_fields: List[str] = None, limit: int = 5, group_by: str = None,
@@ -717,11 +809,12 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     """
 
     logger.info(
-        f"开始查询MySQL数据: {table_name}, 起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
+        f"开始查询MySQL数据: {table_name}, 字段: {value_type}起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
 
     try:
         # 加载数据库配置
         db_info = load_db_config()
+        logger.info(f"数据库配置: {db_info}")
 
         # 确保使用MySQL配置
         if "mysql" in db_info:
@@ -732,26 +825,10 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
 
         # 连接到MySQL数据库
         connection = connect_to_mysql(mysql_info)
+        logger.info(f"成功连接到MySQL数据库: {mysql_info}")
 
-        # 确定日期字段名
-        date_field = None
 
-        # 为不同表选择合适的日期字段
-        if table_name == "Financial_Log":
-            date_field = "post_date"
-        elif table_name == "Material_Inbound":
-            date_field = "entry_date"
-        elif table_name == "Material_Outbound":
-            date_field = "outbound_date"
-        elif table_name == "Material_Log":
-            date_field = "operation_date"
-        elif table_name in ["Article", "Data"]:
-            date_field = "time"
-        elif table_name in ["members", "users", "data"]:
-            date_field = "created_at"
-        else:
-            # 默认日期字段
-            date_field = "日期"
+        date_field = get_date_field(connection, table_name)
 
         # 查询数据
         data = query_data(connection, table_name, start_index, last_index, date_field)
