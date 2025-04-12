@@ -1,23 +1,42 @@
-from src.caculator import query_and_calculate as query_and_compute
-from utils.condense import condense_msg
+from src.caculator import query_and_calculate as mongodb_caculator
 from src.get_db_config import describe_db_info
-from utils.logger import logger
-
+from src.mysql_caculator import query_and_calculate as mysql_caculator
+from utils import logger
+from utils import condense_msg
 from swarm import Swarm, Agent
 from openai import OpenAI
 import httpx
 import json
 import time
 import os
+import sys
+from pathlib import Path
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 
 from dotenv import load_dotenv
 
-# 先清除可能存在的环境变量
-if 'OPENAI_API_KEY' in os.environ:
-    logger.info(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
+if getattr(sys, 'frozen', False):
+    base_dir = Path(sys.executable).parent
+else:
+    base_dir = Path(__file__).resolve().parent.parent
+
+env_path = base_dir / ".env"
+
+# # 先清除可能存在的环境变量
+# if 'OPENAI_API_KEY' in os.environ:
+#     logger.info(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
 
 # 现在加载.env文件
-load_dotenv(override=True)
+
+logger.info(f"加载环境变量文件: {env_path}")
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path, override=True)
 
 # 检查加载结果
 api_key = os.environ.get('OPENAI_API_KEY')
@@ -38,16 +57,21 @@ swarm_client = Swarm(client)
 
 
 
-def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
+def transmit_refined_params_and_db_info(time_info: str, chart_info: str, database_type: str=None):
 
 
-    logger.info("调用")
+    logger.info("called")
 
-    with open("/agent/data/config.json", "r", encoding="utf-8") as f:
-        db_info: str = json.dumps(json.load(f), ensure_ascii=False)
+    try:
+        config_path = os.path.join(get_base_path(), 'data', 'config.json')
+        with open(config_path, "r", encoding="utf-8") as f:
+            db_info = json.load(f)
+    except FileNotFoundError:
+        logger.error(f"配置文件 {config_path} 未找到，请检查路径和文件名")
+        return "配置文件未找到"
 
 
-    message = condense_msg(time_info, chart_info, db_info)
+    message = condense_msg(time_info, chart_info, database_type, db_info)
 
 
 
@@ -56,12 +80,16 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         model="gpt-4o-mini",
         instructions=
         """
-        你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息调用query_and_compute函数，获取分析结果,
-        query_and_compute(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
+        你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息判断是mysql还是mongodb，然后调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
+        mongodb_caculator(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
         这个函数用于从数据库里获取数据，然后把数据进行一些统计处理，最后返回str类型的分析结果，用于提供给前端绘图。
         
+        
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
+        You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
+               
         你的messages格式是固定的，请注意其中的time_info, chart_info, db_info
-        你要根据db_info的信息，，把time_info和chart_info调整为对应的格式，然后把他们作为参数传入query_and_compute函数里
+        你要根据db_info的信息，，把time_info和chart_info调整为对应的格式，然后把他们作为参数传入mongodb_caculator函数里
         
         start_index: str, last_index: str的信息是与数据库对应的，也就是说你需要根据db_info提供的信息去修改start_index: str, last_index: str的格式，从而保证适配
         value_info: str的信息是用户需要进行数据分析的那一类别或分析的对象，你需要将此参数转化为合适的value_info: str值
@@ -96,6 +124,9 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         - "显示考勤率最高的前5个部门" -> chart_type="ranking", value_type="考勤", group_by_fields="部门", limit=5
         - "哪些部门的出勤率最好" -> chart_type="ranking", value_type="考勤", group_by_fields="部门"
         
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
+        You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
+        
         我们举例假设
         time_info是"2025年4月",而根据db_info，其应该是"2025-04"这样的格式，那么
         start_index: str = "2025-04-01", last_index: str = "2025-04-30"
@@ -104,9 +135,18 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         同时判断chart_type适合"bar","line","pie","scatter","heatmap"里哪一种图然后填入       
         你将得到一个str类型的返回值
         
-        你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
+        You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type      
+        mysql_caculator(
+            start_index=""，  # 可选，开始日期
+            last_index="",   # 可选，结束日期
+            value_type=""，        # 要分析的字段
+            table_name=""， # 表名
+            chart_type=""   # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
+        )
+        可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb
         """,
-        functions=[query_and_compute]
+        functions=[mongodb_caculator,mysql_caculator]
     )
 
     logger.info(message)
@@ -148,16 +188,27 @@ def init_agent(
         instructions=
         """
         你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。你严格遵循我的指示，任何函数返回值都会原封不动地返回给用户。
+        别人问你你不要说你基于chatgpt，而是说你基于deepseek-v3
+        
+        
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入
+        You're only allowed to call the function once,
+        你只被允许调用一次函数，所以你要选择最优的一组参数传入
+        You're only allowed to call the function once
         
         当用户需要你进行数据分析时，请考虑调用函数。如果没有分析类的需求请不要调用函数。
-        transmit_refined_params_and_db_info(time_info: str, chart_info: str)
+        transmit_refined_params_and_db_info(time_info: str, chart_info: str, database_type: str)
             time_info: 时间或者索引信息
             chart_info: 待分析对象信息
-            示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况”
+            database_type: 数据库类型，是mongodb还是mysql还是别的什么
+            示例如下：假如用户询问“请为我统计分析一下2025年4月的考勤情况/mysql”
             那么时间或索引信息就是“2025年4月”，待分析对象信息就是“考勤情况”
             也就是time_info = "2025年4月", chart_info = "考勤情况"
             如果用户指定了图表类型，比如说“2024年3月考勤情况，画成折线图”,
             那么chart_info = "考勤情况,折线图"
+            database_type = “mysql”，
+            如果是“请为我统计分析一下2025年4月的考勤情况/mongodb”
+            那就是database_type = “mongodb”
             把这个作为参数传入transmit_refined_params_and_db_info函数，他的返回值类型是str
             
             如果你判断没有索引信息，那么time_info = "None"

@@ -5,13 +5,14 @@ sys.path.append(os.path.dirname(__file__))
 
 from src.agent import init_agent, client
 from src.memory import ConversationMemory
+from utils import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import httpx
 import time
 import json
 
 # 创建全局会话记忆实例
-memory_manager = ConversationMemory(nlp_model="zh_core_web_sm", max_history=50)
+memory_manager = ConversationMemory(max_history=50)
 
 # 在全局变量部分
 user_agents = {}
@@ -65,12 +66,6 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
 
     # 添加用户消息到历史
     memory_manager.add_message(combined_id, "user", user_message)
-    # 获取完整的知识图谱
-    knowledge_graph = memory_manager.knowledge_graph[combined_id]
-    kg_message = {
-        "role": "system",  # 使用system角色
-        "content": f"知识图谱: {json.dumps(knowledge_graph, ensure_ascii=False)}"  # 将知识图谱作为内容
-    }
 
     # 获取当前会话的消息历史
     messages = memory_manager.get_messages(combined_id)
@@ -78,19 +73,8 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
     # # 打印会话历史长度用于调试
     # print(f"会话 {combined_id} 历史长度: {len(messages)}")
 
-    
-    if (messages and isinstance(messages[0], dict) and
-            messages[0].get("实体") == knowledge_graph["实体"] and
-            messages[0].get("关系") == knowledge_graph["关系"] and
-            not (messages[0].get("role") == "" and messages[0].get("content") == "")):
-        # 如果完全匹配，则覆盖
-        messages.insert(0, kg_message)
 
-    else:
-        # 如果有任何一项不满足，则插入
-        messages[0] = kg_message
-
-    print(messages)
+    logger.info(messages)
 
 
 

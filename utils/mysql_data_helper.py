@@ -1,25 +1,63 @@
-# 新建文件: utils/data_helper.py
-
 import json
-import pymongo
+import os
+import mysql.connector
+from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 
 
-def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
-    """连接到MongoDB数据库"""
-    host = db_info.get("host", "localhost")
-    port = db_info.get("port", 27017)
-    username = db_info.get("username", "")
-    password = db_info.get("password", "")
-    database_name = db_info.get("database", "")
 
-    connection_string = f"mongodb://"
-    if username and password:
-        connection_string += f"{username}:{password}@"
-    connection_string += f"{host}:{port}/{database_name}"
+def connect_to_mysql(db_info: Dict[str, Any]) -> mysql.connector.connection.MySQLConnection:
+    """连接到MySQL数据库"""
+    # 检查是否有mysql专用配置
+    if "mysql" in db_info:
+        mysql_info = db_info["mysql"]
+    else:
+        mysql_info = db_info
 
-    client = pymongo.MongoClient(connection_string)
-    return client[database_name]
+    host = mysql_info.get("host", "localhost")
+    port = mysql_info.get("port", 3306)
+    username = mysql_info.get("username", "")
+    password = mysql_info.get("password", "")
+    database_name = mysql_info.get("database", "")
+
+    try:
+        connection = mysql.connector.connect(
+            host=host,
+            port=port,
+            user=username,
+            password=password,
+            database=database_name
+        )
+        return connection
+    except mysql.connector.Error as err:
+        print(f"数据库连接错误: {err}")
+        raise
+
+
+def load_db_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+    """加载数据库配置"""
+    if config_path is None:
+        # 尝试默认路径
+        config_paths = [
+            "/agent/data/mongodb_config.json",  # 原始路径
+            "data/mongodb_config.json",  # 相对路径
+            "mongodb_config.json"  # 当前目录
+        ]
+
+        for path in config_paths:
+            if os.path.exists(path):
+                config_path = path
+                break
+
+        if config_path is None:
+            raise FileNotFoundError("找不到配置文件")
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"加载配置文件失败: {e}")
+        raise
 
 
 def enrich_data_with_relations(
@@ -28,18 +66,18 @@ def enrich_data_with_relations(
         db_info: Optional[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
     """
-    通用数据关联函数，用于将主数据集与辅助数据集关联
+    通用数据关联函数，用于将主数据集与辅助数据集关联（MySQL版本）
 
     参数:
     - primary_data: 主数据列表
     - join_config: 关联配置，格式为:
         {
-            "auxiliary_collection": "集合名称", # 辅助数据集合名
+            "auxiliary_table": "表名称", # 辅助数据表名
             "primary_key": "主数据关联字段",     # 主数据中的关联键
             "auxiliary_key": "辅助数据关联字段", # 辅助数据中的关联键
             "fields_to_include": ["字段1", "字段2"] # 要包含的辅助数据字段列表
         }
-    - db_info: 数据库连接信息，如果为None则尝试从config.json读取
+    - db_info: 数据库连接信息，如果为None则尝试加载配置
 
     返回:
     - 增强后的数据列表
@@ -47,30 +85,49 @@ def enrich_data_with_relations(
     if not primary_data or not join_config:
         return primary_data
 
-    # 如果没有提供db_info，尝试从config.json加载
+    # 如果没有提供db_info，尝试加载配置
     if db_info is None:
         try:
-            with open("mongodb_config.json", "r", encoding="utf-8") as f:
-                db_info = json.load(f)
+            db_info = load_db_config()
         except Exception as e:
-            print(f"无法加载数据库配置: {str(e)}")
+            print(f"加载数据库配置失败: {e}")
             return primary_data
 
     # 获取关联配置
-    auxiliary_collection = join_config.get("auxiliary_collection")
+    auxiliary_table = join_config.get("auxiliary_table")
     primary_key = join_config.get("primary_key")
     auxiliary_key = join_config.get("auxiliary_key")
     fields_to_include = join_config.get("fields_to_include", [])
 
-    if not auxiliary_collection or not primary_key or not auxiliary_key:
+    if not auxiliary_table or not primary_key or not auxiliary_key:
         return primary_data
 
+    connection = None
+    cursor = None
     try:
         # 连接数据库
-        db = connect_to_database(db_info)
+        connection = connect_to_mysql(db_info)
+        cursor = connection.cursor(dictionary=True)
 
-        # 获取辅助数据集
-        auxiliary_data = list(db[auxiliary_collection].find())
+        # 获取唯一的主键值列表
+        primary_values = list(set(item[primary_key] for item in primary_data if primary_key in item))
+
+        if not primary_values:
+            return primary_data
+
+        # 构建IN查询的参数
+        placeholders = ', '.join(['%s'] * len(primary_values))
+
+        # 构建要查询的字段列表
+        fields_list = [auxiliary_key] + fields_to_include
+        fields_str = ', '.join(fields_list)
+
+        # 构建查询
+        query = f"SELECT {fields_str} FROM {auxiliary_table} WHERE {auxiliary_key} IN ({placeholders})"
+
+        # 执行查询
+        cursor.execute(query, primary_values)
+        auxiliary_data = cursor.fetchall()
 
         # 创建辅助数据的映射字典
         auxiliary_map = {}
@@ -84,7 +141,13 @@ def enrich_data_with_relations(
                 # 只复制需要的字段
                 for field in fields_to_include:
                     if field in item:
-                        auxiliary_map[key_value][field] = item[field]
+                        value = item[field]
+                        # 处理特殊类型
+                        if isinstance(value, (datetime, date)):
+                            value = value.isoformat()
+                        elif isinstance(value, bytes):
+                            value = value.decode('utf-8', errors='replace')
+                        auxiliary_map[key_value][field] = value
 
         # 为主数据增加辅助数据中的字段
         enriched_data = []
@@ -103,8 +166,13 @@ def enrich_data_with_relations(
         return enriched_data
 
     except Exception as e:
-        print(f"关联数据时出错: {str(e)}")
+        print(f"关联数据时出错: {e}")
         return primary_data
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 
 def group_and_aggregate(
@@ -278,3 +346,76 @@ def calculate_derived_metrics(
         result.append(new_item)
 
     return result
+
+
+def query_data(
+        connection: mysql.connector.connection.MySQLConnection,
+        table_name: str,
+        start_index: Optional[str] = None,
+        last_index: Optional[str] = None,
+        date_field: str = "日期"
+) -> List[Dict[str, Any]]:
+    """
+    从MySQL查询数据
+
+    参数:
+    - connection: MySQL连接
+    - table_name: 表名
+    - start_index: 可选的起始日期
+    - last_index: 可选的结束日期
+    - date_field: 日期字段名
+
+    返回:
+    - 查询结果列表
+    """
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        # 确保表名存在
+        cursor.execute("SHOW TABLES")
+        tables = [t[f"Tables_in_{connection.database}"] for t in cursor.fetchall()]
+
+        if table_name not in tables:
+            print(f"表 {table_name} 不存在于数据库中")
+            return []
+
+        # 检查日期字段是否存在于表中
+        cursor.execute(f"DESCRIBE {table_name}")
+        fields = [field["Field"] for field in cursor.fetchall()]
+
+        # 构建查询
+        query = f"SELECT * FROM {table_name}"
+        params = []
+
+        # 如果提供了日期范围且日期字段存在，添加WHERE子句
+        if start_index and last_index and date_field in fields:
+            query += f" WHERE {date_field} BETWEEN %s AND %s"
+            params = [start_index, last_index]
+
+        # 执行查询
+        cursor.execute(query, params)
+
+        # 获取结果并处理特殊数据类型
+        result = []
+        for row in cursor.fetchall():
+            processed_row = {}
+            for key, value in row.items():
+                if isinstance(value, (datetime, date)):
+                    processed_row[key] = value.isoformat()
+                elif isinstance(value, bytes):
+                    processed_row[key] = value.decode('utf-8', errors='replace')
+                elif value is None:
+                    processed_row[key] = None
+                else:
+                    processed_row[key] = value
+            result.append(processed_row)
+
+        return result
+
+    except mysql.connector.Error as err:
+        print(f"查询数据时发生错误: {err}")
+        return []
+
+    finally:
+        if cursor:
+            cursor.close()

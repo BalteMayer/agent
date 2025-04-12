@@ -10,10 +10,11 @@ import json
 import time
 import os
 import sys
-import zh_core_web_sm
+
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from src.chat import process_message, sessions, update_user_agent, get_current_agent_config, clear_session, get_session_messages
+from utils import logger
 
 #TODO:deepseek调用函数，绘图框架(把数据库信息存放在一个文本文件里，可以更改)，本地部署，嵌入式，其他功能，instruction改为预设(把预设信息存放在一个文本文件里，可以更改)
 app = FastAPI(title="Swarm API", description="通过API与Swarm智能体交互的服务")
@@ -64,6 +65,7 @@ class ChatResponse(BaseModel):
 @app.post("/api/chat")
 def chat(request: ChatRequest, req: Request):
     """处理聊天请求"""
+    time_start = time.time()
     try:
         # 获取用户IP或其他标识，优先使用X-Forwarded-For头信息
         user_id = req.headers.get("X-Forwarded-For", req.client.host)
@@ -75,12 +77,12 @@ def chat(request: ChatRequest, req: Request):
         response = process_message(
             session_id=session_id,
             user_message=request.message,
-            stream=request.stream if hasattr(request, "stream") else True,
+            stream=request.stream if request.stream is not None and hasattr(request, "stream") else True,
             user_id=user_id  # 传递用户标识
         )
 
         # 检查是否有错误字段
-        if "error" in response:
+        if response is not None and "error" in response:
             # 返回错误响应，但仍然提供用户友好的信息
             return {
                 "response": "抱歉，服务暂时响应超时，请稍后再试...",
@@ -89,9 +91,18 @@ def chat(request: ChatRequest, req: Request):
             }
 
         # 返回正常响应
+        time_end = time.time()
+        logger.info(f"请求处理耗时: {time_end - time_start:.2f}秒")
+        try:
+            assistant_message = next(
+                (item['content'] for item in reversed(response.get('response', [])) if item.get('role') == 'assistant'),
+                ""
+            )
+        except Exception as e:
+            assistant_message = "[系统错误：未能正确解析助手回复内容]"
+
         return {
-            "response": next(
-                (item['content'] for item in reversed(response['response']) if item['role'] == 'assistant'), ""),
+            "response": assistant_message,
             "session_id": session_id
         }
     except Exception as e:
@@ -251,30 +262,7 @@ def list_sessions(req: Request):
 
     return {"sessions": user_sessions}
 
-@app.post("/api/save-json")
-async def save_json(request: Request):
-    username = request.headers.get("X-Username")
-    if not username:
-        raise HTTPException(status_code=400, detail="Missing X-Username header")
-
-    try:
-        data = await request.json()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
-
-    save_path = "/agent/data"
-    os.makedirs(save_path, exist_ok=True)
-
-    file_path = os.path.join(save_path, "config.json")
-    try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
-
-    return {"status": "success", "saved_path": file_path}
-
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=False)

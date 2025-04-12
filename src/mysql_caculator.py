@@ -1,19 +1,19 @@
 import json
 import os
-import sys
-import pymongo
+import mysql.connector
+from datetime import datetime, date
 import numpy as np
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Union, Optional
-from utils.data_helper import enrich_data_with_relations, group_and_aggregate, calculate_derived_metrics
-from utils.logger import logger
-
-
-def get_base_path():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
+from typing import Dict, List, Any, Union, Optional, Tuple
+from utils import (
+    connect_to_mysql,
+    load_db_config,
+    enrich_data_with_relations,
+    group_and_aggregate,
+    calculate_derived_metrics,
+    query_data
+)
+from utils import logger
 
 
 class ChartCalculator(ABC):
@@ -78,7 +78,7 @@ class LineChartCalculator(ChartCalculator):
         # 假设数据中有日期字段
         date_field = None
         for field in data[0].keys() if data else []:
-            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time']):
+            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time', 'created_at']):
                 date_field = field
                 break
 
@@ -279,7 +279,8 @@ class HeatMapCalculator(ChartCalculator):
             # 如果没有足够的字段，尝试创建时间段作为第二个维度
             date_field = None
             for field in data[0].keys():
-                if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time']):
+                if any(date_keyword in field.lower() for date_keyword in
+                       ['日期', 'date', '时间', 'time', 'created_at']):
                     date_field = field
                     break
 
@@ -339,7 +340,6 @@ class HeatMapCalculator(ChartCalculator):
         return result
 
 
-
 class YoYMoMCalculator(ChartCalculator):
     """同比环比计算器"""
 
@@ -358,7 +358,7 @@ class YoYMoMCalculator(ChartCalculator):
         # 寻找日期字段
         date_field = None
         for field in data[0].keys():
-            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time']):
+            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time', 'created_at']):
                 date_field = field
                 break
 
@@ -371,6 +371,10 @@ class YoYMoMCalculator(ChartCalculator):
             if date_field in item and value_type in item:
                 date_str = item[date_field]
                 try:
+                    # 处理不同的日期格式
+                    if 'T' in date_str:  # ISO格式 (2023-04-16T12:30:45)
+                        date_str = date_str.split('T')[0]
+
                     # 假设日期格式为 YYYY-MM-DD
                     parts = date_str.split('-')
                     if len(parts) >= 2:
@@ -449,7 +453,6 @@ class YoYMoMCalculator(ChartCalculator):
             else:
                 yoy_change = {"absolute": current_value, "percentage": 100}
 
-
         result = {
             "chart_type": "yoy_mom",
             "current_period": {
@@ -472,9 +475,7 @@ class YoYMoMCalculator(ChartCalculator):
         return result
 
 
-
 class MultiFieldAnalysisCalculator(ChartCalculator):
-
     def calculate(self, data: List[Dict[str, Any]], value_type: str, group_by_fields: List[str] = None) -> Dict[
         str, Any]:
         """多字段组合分析计算
@@ -493,23 +494,19 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
             for field in data[0].keys():
                 if field not in excluded_fields and not any(keyword in field.lower()
-                                                            for keyword in ['_id', '日期', 'date', '时间']):
+                                                            for keyword in ['id', '_id', '日期', 'date', '时间', 'time',
+                                                                            'created_at']):
                     group_by_fields.append(field)
-
-
                     if len(group_by_fields) >= 2:
                         break
 
-
         if not group_by_fields:
             return {"error": "无法确定分组字段"}
-
 
         grouped_data = {}
         group_values = {field: set() for field in group_by_fields}
 
         for item in data:
-
             group_key_parts = []
             valid_item = True
 
@@ -526,14 +523,12 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
             group_key = tuple(group_key_parts)
 
-
             if group_key not in grouped_data:
                 grouped_data[group_key] = {
                     "count": 0,
                     "sum": 0,
                     "values": []
                 }
-
 
             if value_type in item:
                 grouped_data[group_key]["count"] += 1
@@ -546,15 +541,12 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
                 else:
                     grouped_data[group_key]["values"].append(item[value_type])
 
-
         groups = []
         for group_key, group_data in grouped_data.items():
             group_info = {}
 
-
             for i, field in enumerate(group_by_fields):
                 group_info[field] = group_key[i]
-
 
             group_info["count"] = group_data["count"]
             group_info["sum"] = group_data["sum"]
@@ -566,14 +558,12 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
             groups.append(group_info)
 
-
         summary = {
             "total_groups": len(groups),
             "dimensions": group_by_fields,
             "total_records": sum(g["count"] for g in groups),
             "total_sum": sum(g["sum"] for g in groups)
         }
-
 
         dimension_values = {field: sorted(list(values)) for field, values in group_values.items()}
 
@@ -584,56 +574,44 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
         }
 
 
-
-
-
-
 class RankingCalculator(ChartCalculator):
-
-
     def calculate(self, data: List[Dict[str, Any]], value_type: str,
                   limit: int = 5, group_by: str = None, ascending: bool = False) -> Dict[str, Any]:
-
         if not data:
             return {"ranks": [], "stats": {}}
 
         try:
-            config_path = os.path.join(get_base_path(), 'data', 'config.json')
-            with open(config_path, "r", encoding="utf-8") as f:
-                db_info = json.load(f)
+            db_info = load_db_config()
         except Exception:
             db_info = {}
 
-
         if group_by and group_by not in data[0]:
             primary_key = None
-            for key in ["姓名", "名字", "学生", "员工", "用户", "name"]:
+            for key in ["姓名", "名字", "学生", "员工", "用户", "name", "nickname"]:
                 if key in data[0]:
                     primary_key = key
                     break
 
             if primary_key:
-                collections = db_info.get("collections", {})
-                auxiliary_collection = None
+                tables = db_info.get("mysql", {}).get("tables", {})
+                auxiliary_table = None
                 auxiliary_key = None
 
-
-                for coll_name, coll_info in collections.items():
-                    fields = coll_info.get("fields", {})
+                for table_name, table_info in tables.items():
+                    fields = table_info.get("fields", {})
                     if group_by in fields:
-                        auxiliary_collection = coll_name
+                        auxiliary_table = table_name
 
                         for field in fields:
-                            if field in ["姓名", "名字", "学生", "员工", "用户", "name"]:
+                            if field in ["姓名", "名字", "学生", "员工", "用户", "name", "nickname"]:
                                 auxiliary_key = field
                                 break
                         if auxiliary_key:
                             break
 
-
-                if auxiliary_collection and auxiliary_key:
+                if auxiliary_table and auxiliary_key:
                     join_config = {
-                        "auxiliary_collection": auxiliary_collection,
+                        "auxiliary_table": auxiliary_table,
                         "primary_key": primary_key,
                         "auxiliary_key": auxiliary_key,
                         "fields_to_include": [group_by]
@@ -641,12 +619,12 @@ class RankingCalculator(ChartCalculator):
 
                     data = enrich_data_with_relations(data, join_config, db_info)
 
-
         if group_by and (not data or group_by not in data[0]):
             potential_fields = []
             for field in data[0].keys():
                 if field != value_type and not any(keyword in field.lower()
-                                                   for keyword in ['_id', '日期', 'date', '时间']):
+                                                   for keyword in
+                                                   ['id', '_id', '日期', 'date', '时间', 'time', 'created_at']):
                     potential_fields.append(field)
 
             group_by = potential_fields[0] if potential_fields else None
@@ -654,15 +632,12 @@ class RankingCalculator(ChartCalculator):
         if not group_by:
             return {"error": "无法确定分组字段"}
 
-
         aggregations = [
             {"type": "count", "field": value_type, "output": "total"},
             {"type": "count", "field": value_type, "condition": {value_type: "出勤"}, "output": "matches"}
         ]
 
-
         grouped_data = group_and_aggregate(data, group_by, value_type, aggregations)
-
 
         derived_metrics = [
             {
@@ -672,20 +647,15 @@ class RankingCalculator(ChartCalculator):
             }
         ]
 
-
         result_data = calculate_derived_metrics(grouped_data, derived_metrics)
 
-
         result_data.sort(key=lambda x: x.get("percentage", 0), reverse=not ascending)
-
 
         if limit > 0 and len(result_data) > limit:
             result_data = result_data[:limit]
 
-
         for i, item in enumerate(result_data):
             item["rank"] = i + 1
-
 
         percentages = [item.get("percentage", 0) for item in result_data]
         overall_stats = {
@@ -703,12 +673,9 @@ class RankingCalculator(ChartCalculator):
         }
 
 
-
 class ChartCalculatorFactory:
-
     @staticmethod
     def create_calculator(chart_type: str) -> ChartCalculator:
-
         calculator_map = {
             "bar": BarChartCalculator,
             "line": LineChartCalculator,
@@ -727,60 +694,18 @@ class ChartCalculatorFactory:
         return calculator_class()
 
 
-def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
-    host = db_info.get("host", "localhost")
-    port = db_info.get("port", 27017)
-    username = db_info.get("username", "")
-    password = db_info.get("password", "")
-    database_name = db_info.get("database", "")
-
-    connection_string = f"mongodb://"
-    if username and password:
-        connection_string += f"{username}:{password}@"
-    connection_string += f"{host}:{port}/{database_name}"
-
-    client = pymongo.MongoClient(connection_string)
-    return client[database_name]
-
-
-def query_data(db, collection_name: str,
-               start_index: Optional[str] = None, last_index: Optional[str] = None,
-               date_field: str = "日期") -> List[Dict[str, Any]]:
-    collection = db[collection_name]
-
-
-    query = {}
-    if start_index and last_index:
-        query[date_field] = {
-            "$gte": start_index,
-            "$lte": last_index
-        }
-
-
-    cursor = collection.find(query)
-
-
-    result = []
-    for doc in cursor:
-        if '_id' in doc:
-            doc['_id'] = str(doc['_id'])
-        result.append(doc)
-
-    return result
-
-
 def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[str] = None,
-                        value_type: str = None, coll_info: str = None, chart_type: str = None,
+                        value_type: str = None, table_name: str = None, chart_type: str = None,
                         group_by_fields: List[str] = None, limit: int = 5, group_by: str = None,
                         ascending: bool = False) -> str:
     """
-    根据配置连接数据库，查询指定范围(可选)数据，并根据图表类型进行计算
+    根据配置连接MySQL数据库，查询指定范围(可选)数据，并根据图表类型进行计算
 
     参数:
     - start_index: 可选的起始索引(日期等)
     - last_index: 可选的结束索引
     - value_type: 要分析的数据字段
-    - coll_info: 集合(表)名称
+    - table_name: 表名
     - chart_type: 图表类型
     - group_by_fields: 多字段分析时的分组字段列表
     - limit: 排名分析时返回的最大数量，默认为5
@@ -791,35 +716,65 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
     - JSON格式的计算结果
     """
 
-    logger.info(f"开始查询数据: {coll_info}, 起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
+    logger.info(
+        f"开始查询MySQL数据: {table_name}, 起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
 
     try:
-        config_path = os.path.join(get_base_path(), 'data', 'config.json')
-        with open(config_path, "r", encoding="utf-8") as f:
-            db_info = json.load(f)
+        # 加载数据库配置
+        db_info = load_db_config()
 
-        db = connect_to_database(db_info)
+        # 确保使用MySQL配置
+        if "mysql" in db_info:
+            mysql_info = db_info["mysql"]
+        else:
+            # 如果没有mysql子键，使用顶级配置
+            mysql_info = db_info
 
-        data = query_data(db, coll_info, start_index, last_index)
+        # 连接到MySQL数据库
+        connection = connect_to_mysql(mysql_info)
 
+        # 确定日期字段名
+        date_field = None
 
+        # 为不同表选择合适的日期字段
+        if table_name == "Financial_Log":
+            date_field = "post_date"
+        elif table_name == "Material_Inbound":
+            date_field = "entry_date"
+        elif table_name == "Material_Outbound":
+            date_field = "outbound_date"
+        elif table_name == "Material_Log":
+            date_field = "operation_date"
+        elif table_name in ["Article", "Data"]:
+            date_field = "time"
+        elif table_name in ["members", "users", "data"]:
+            date_field = "created_at"
+        else:
+            # 默认日期字段
+            date_field = "日期"
+
+        # 查询数据
+        data = query_data(connection, table_name, start_index, last_index, date_field)
+
+        # 根据图表类型执行计算
         if chart_type.lower() == "ranking":
-
             calculator = RankingCalculator()
             calculation_result = calculator.calculate(data, value_type, limit, group_by, ascending)
         else:
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
-
 
             if chart_type.lower() == "multi_field" and group_by_fields:
                 calculation_result = calculator.calculate(data, value_type, group_by_fields=group_by_fields)
             else:
                 calculation_result = calculator.calculate(data, value_type)
 
+        # 关闭连接
+        connection.close()
 
+        # 构建结果
         result = {
             "chart_type": chart_type,
-            "collection": coll_info,
+            "table": table_name,
             "value_type": value_type,
             "time_range": {
                 "start": start_index if start_index else "全部",
@@ -832,14 +787,19 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
         return f"[{chart_type}{json.dumps(result, ensure_ascii=False)}]"
 
     except Exception as e:
+        # 确保任何异常情况下都能关闭连接
+        if 'connection' in locals():
+            connection.close()
+
         error_result = {
             "error": str(e),
             "chart_type": chart_type,
-            "collection": coll_info,
+            "table": table_name,
             "value_type": value_type,
             "time_range": {
                 "start": start_index if start_index else "全部",
                 "end": last_index if last_index else "全部"
             }
         }
+
         return json.dumps(error_result, ensure_ascii=False)
