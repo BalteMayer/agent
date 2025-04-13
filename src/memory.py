@@ -45,13 +45,41 @@ class ConversationMemory:
         # 保存会话消息
         if session_id in self.sessions:
             session_file = self._get_file_path(self.sessions_dir, session_id)
+
+            # 判断文件是否已存在
+            file_exists = os.path.exists(session_file)
+
             try:
+                # 准备保存的数据
+                save_data = {
+                    'session_id': session_id,
+                    'messages': self.sessions[session_id],
+                    'last_updated': time.time()
+                }
+
+                # 如果文件不存在且消息列表不为空，添加title字段
+                if not file_exists and self.sessions[session_id]:
+                    # 获取用户的第一条消息
+                    for msg in self.sessions[session_id]:
+                        if msg.get('role') == 'user':
+                            # 取用户问题的前十个字符作为title
+                            title = msg.get('content', '')[:10]
+                            save_data['title'] = title
+                            break
+                # 如果文件已存在，读取原有的title保留
+                elif file_exists:
+                    try:
+                        with open(session_file, 'r', encoding='utf-8') as f:
+                            existing_data = json.load(f)
+                            if 'title' in existing_data:
+                                save_data['title'] = existing_data['title']
+                    except Exception as e:
+                        print(f"读取已有会话数据失败 {session_id}: {str(e)}")
+
+                # 保存数据到文件
                 with open(session_file, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        'session_id': session_id,
-                        'messages': self.sessions[session_id],
-                        'last_updated': time.time()
-                    }, f, ensure_ascii=False, indent=2)
+                    json.dump(save_data, f, ensure_ascii=False, indent=2)
+
             except Exception as e:
                 print(f"保存会话消息失败 {session_id}: {str(e)}")
 

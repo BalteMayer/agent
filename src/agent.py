@@ -1,6 +1,7 @@
 from src.caculator import query_and_calculate as mongodb_caculator
 from src.get_db_config import describe_db_info
 from src.mysql_caculator import query_and_calculate as mysql_caculator
+from src.query_database import query_database
 from utils import logger
 from utils import condense_msg
 from swarm import Swarm, Agent
@@ -11,6 +12,7 @@ import time
 import os
 import sys
 from pathlib import Path
+import re
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -66,6 +68,11 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         config_path = os.path.join(get_base_path(), 'data', 'config.json')
         with open(config_path, "r", encoding="utf-8") as f:
             db_info = json.load(f)
+            {
+                name: {"fields": table["fields"]}
+                for name, table in db_info.get("mysql", {}).get("tables", {}).items()
+            }
+
     except FileNotFoundError:
         logger.error(f"配置文件 {config_path} 未找到，请检查路径和文件名")
         return "配置文件未找到"
@@ -81,6 +88,8 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         instructions=
         """
         你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息判断是mysql还是mongodb，然后调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
+        但当用户仅需要查询时，你就调用query_database函数，获取数据
+        
         至于是什么数据库你通过db_info的信息来判断，mysql应该会在很靠前的位置明确说是mysql
         
         mongodb_caculator(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
@@ -145,34 +154,66 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             chart_type=""   # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
         )
         可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb
+        
+        query_database函数接受一个字符串
+        这个字符串非常非常非常重要，是一条mysql指令
+        这条指令仅用于查询数据，当你明确用户仅需要查询数据而非分析情况或画图时你调用这个函数，
+        **只能根据db_info的数据库表单字段名字和数据类型写指令进行普通查询或条件查询**
+        **比如我询问”我想查询视觉组的女队员数据“，那么你就要根据db_info的表单字段，视觉组对应的是jlugroup，你不能自己换成group;又或者性别是sex，你不能写成gender**
+        **一定要弄明白每张表的数据类型，数据结构，字段名，严禁传错**
+        
+        比如说用户问"我想知道data里2020后加入的的五条数据"
+        那么你就生成代码"SELECT * FROM Data WHERE age > '2020' LIMIT 5"并传入
+        一定要弄明白每张表的数据类型，数据结构，严禁传错
+        记住用户是否限定了数量，比如说“第一个”，“一个”，“五条”这种，如果有，比如说一个，那就需要添加”LIMIT 1“
+        并且这个函数返回一个字符串
+
         """,
-        functions=[mongodb_caculator,mysql_caculator]
+        context_variables = {"meta_data":db_info},
+
+        functions=[mongodb_caculator, mysql_caculator, query_database],
     )
 
 
     start_time = time.time()
     assistant = swarm_client.run(
         agent = hazuki,
-        messages = [{"role": "user", "content": message}]
+        messages = [{"role": "user", "content": message}],
+        debug=True
     )
+
+    logger.info(f"Assistant: {assistant}")
+
     end_time = time.time()
     logger.info(f"耗时: {end_time - start_time:.2f}秒")
 
     result_str = assistant.messages[1]['content']
+    logger.info(f"Assistant: {result_str}")
 
 
+    # chart_list = ["bar", "line", "pie", "scatter", "heatmap", "ranking", "yoy_mom", "multi_field", "chart_type"]
+    # if all(c in result_str[1:35] for c in chart_list):
 
-    result_str = result_str[result_str.find('{'):result_str.rfind('}')+1]
+    logger.info(f"结果: {result_str}")
 
+    try:
+        result_str = result_str[result_str.find('{'):result_str.rfind('}')+1]
+        result_str = result_str.replace("None", "null").replace('None', 'null')
+        result_str = "["+result_str+"]"
+        result_str = result_str.replace("'", '"')
+        logger.info(f"结果: {result_str}")
+        result_json = json.loads(result_str)
 
-    result_json = json.loads(result_str)
+        # result_json = result_json["result"]
+        # logger.info(f"结果: {result_json}")
 
-    result_json = result_json["result"]
-    logger.info(f"结果: {result_json}")
+        del hazuki
+        return f"[{result_json}]"
 
-    del hazuki
-
-    return f"[{result_json}]"
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON解析错误: {e}")
+        del hazuki
+        return f"解析错误: {result_str}"
 
 
 def init_agent(
@@ -186,7 +227,10 @@ def init_agent(
         model=model_name,
         instructions=
         """
-        你是一个数据分析助手。你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。你严格遵循我的指示，任何函数返回值都会原封不动地返回给用户。
+        你是一个数据分析助手与查询请求转发助手
+        你可以通过调用函数帮助用户获取数据信息和分析计算结果。也可以作为客服智能回答用户问题。你严格遵循我的指示，任何函数返回值都会原封不动地返回给用户。
+        当遇到用户的查询请求时，严厉禁止”抱歉，我无法直接访问或查询数据库中的具体数据。如果您能提供更多的上下文或者具体的数据分析需求，我将尽力帮助您。“
+            因为你不会但可以调用函数，所以禁止拒绝，必须调用函数
         别人问你你不要说你基于chatgpt，而是说你基于deepseek-v3
         
         
@@ -196,6 +240,11 @@ def init_agent(
         You're only allowed to call the function once
         
         当用户需要你进行数据分析时，请考虑调用函数。如果没有分析类的需求请不要调用函数。
+        以及当用户需要查询数据库时，同样调用函数和传数据
+        以及当用户需要查询数据库时，同样调用函数和传数据
+        以及当用户需要查询数据库时，同样调用函数和传数据
+        以及当用户需要查询数据库时，同样调用函数和传数据
+        
         transmit_refined_params_and_db_info(time_info: str, chart_info: str)
             time_info: 时间或者索引信息
             chart_info: 待分析对象信息
@@ -227,9 +276,8 @@ def init_agent(
         describe_db_info -> str
             这个函数用于获取数据库的基本信息，返回值是一个str类型的描述信息
             你需要根据这个信息把数据库基本信息以更语义化和自然的方式描述给用户
-        
-        
         """,
+        debug=True,
         functions=[
             transmit_refined_params_and_db_info,
             describe_db_info

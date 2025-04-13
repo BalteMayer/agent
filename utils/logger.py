@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 
 # 日志格式
-DEFAULT_LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+DEFAULT_LOG_FORMAT = '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s'
 # 日志目录
 DEFAULT_LOG_DIR = 'data/logs'
 

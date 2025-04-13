@@ -330,5 +330,58 @@ def list_sessions(req: Request):
         }
 
 
+@app.get("/api/sessions/list")
+def list_all_sessions(req: Request):
+    """API端点：获取所有会话列表，每个会话包含title和session_id"""
+    current_timestamp = get_current_timestamp()
+    user_id = req.headers.get("X-Forwarded-For", req.client.host)
+
+    try:
+        # 导入会话管理器
+        from src.chat import memory_manager
+
+        # 获取会话文件列表
+        sessions_dir = memory_manager.sessions_dir
+        session_list = []
+
+        if os.path.exists(sessions_dir):
+            for file_name in os.listdir(sessions_dir):
+                if file_name.endswith('.json'):
+                    file_path = os.path.join(sessions_dir, file_name)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            # 获取session_id，去掉文件扩展名
+                            session_id = file_name[:-5]
+
+                            # 从文件读取title，如果不存在则使用默认值
+                            title = data.get('title', '未命名会话')
+
+                            # 添加到会话列表
+                            session_list.append({
+                                'title': title,
+                                'session_id': session_id.replace("_", ":")
+                            })
+                    except Exception as e:
+                        print(f"读取会话文件失败 {file_path}: {str(e)}")
+
+        return {
+            "code": 200,
+            "data": {
+                "sessions": session_list,
+            }
+        }
+    except Exception as e:
+        return {
+            "code": 500,
+            "data": {
+                "error": str(e),
+                "message": "获取会话列表失败",
+                "timestamp": current_timestamp,
+                "user": user_id
+            }
+        }
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001, reload=False)
