@@ -1,6 +1,6 @@
 from src.caculator import query_and_calculate as mongodb_caculator
 from src.get_db_config import describe_db_info
-from src.mysql_caculator import query_and_calculate as mysql_caculator
+from src.mysql_caculator import  mysql_caculator
 from src.query_database import query_database
 from utils import logger
 from utils import condense_msg
@@ -89,63 +89,63 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         """
         你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息判断是mysql还是mongodb，然后调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
         但当用户仅需要查询时，你就调用query_database函数，获取数据
-        
+
         至于是什么数据库你通过db_info的信息来判断，mysql应该会在很靠前的位置明确说是mysql
-        
-        mongodb_caculator(start_index: str, last_index: str, value_info, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
+
+        mongodb_caculator(start_index: str, last_index: str, value_type, coll_info: str, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
         这个函数用于从数据库里获取数据，然后把数据进行一些统计处理，最后返回str类型的分析结果，用于提供给前端绘图。
-        
-        
+
+
         你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
         You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
-               
+
         你的messages格式是固定的，请注意其中的time_info, chart_info, db_info
         你要根据db_info的信息，，把time_info和chart_info调整为对应的格式，然后把他们作为参数传入mongodb_caculator函数里
-        
+
         start_index: str, last_index: str的信息是与数据库对应的，也就是说你需要根据db_info提供的信息去修改start_index: str, last_index: str的格式，从而保证适配
-        value_info: str的信息是用户需要进行数据分析的那一类别或分析的对象，你需要将此参数转化为合适的value_info: str值
-        
+        value_type: str的信息是用户需要进行数据分析的那一类别或分析的对象，你需要将此参数转化为合适的value_type: str值
+
         chart_type: str的信息是用户需要进行数据分析的时需要绘图的格式，你需要将此参数转化为合适的chart_type: str值
         chart_type: str只能是以下几种值:
         - "bar": 条形图
-        - "line": 折线图 
+        - "line": 折线图
         - "pie": 饼图
         - "scatter": 散点图
         - "heatmap": 热力图
         - "ranking": 排名分析
-        
+
         coll_info: str的信息是用户需要进行数据分析的时需要绘图的对象所在的collection的名称，你需要将此参数转化为合适的coll_info: str值
-        
+
         如果你判断用户没有输入索引信息，那么start_index: str, last_index: str都设置为None，表示统计全局。比如用户说"我了解各个部门人员数量情况"，那么这个是索引时间不明确，
         start_index: str = None, last_index: str = None
         重申一遍，没有明确给出索引相关信息就是总体讨论"我想了解XX情况"等于"我想了解总体的XX情况"
-        
+
         如果用户需要同比环比分析，例如"与去年同期相比，今年的销售增长了多少"、"4月与3月相比业绩变化如何"，
         请使用chart_type="yoy_mom"。
-        
-        如果用户需要多维度分析，例如"按部门和考勤状态统计人数"、"分析不同部门的考勤情况", 
+
+        如果用户需要多维度分析，例如"按部门和考勤状态统计人数"、"分析不同部门的考勤情况",
         请使用chart_type="multi_field"，并设置group_by_fields参数，例如group_by_fields=["部门", "考勤"]。
-        
+
         如果用户需要排名或TOP N的分析，例如"显示考勤率最高的前5个部门"、"哪些员工迟到次数最多"，
         请使用chart_type="ranking"，并设置limit参数(默认为5)和group_by参数。
         当用户查询包含"最高"、"最低"、"排名"、"前几"、"top"等词汇时，必须使用chart_type="ranking"。
         例如:
         - "显示考勤率最高的前5个部门" -> chart_type="ranking", value_type="考勤", group_by_fields="部门", limit=5
         - "哪些部门的出勤率最好" -> chart_type="ranking", value_type="考勤", group_by_fields="部门"
-        
+
         你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
         You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
-        
+
         我们举例假设
         time_info是"2025年4月",而根据db_info，其应该是"2025-04"这样的格式，那么
         start_index: str = "2025-04-01", last_index: str = "2025-04-30"
         同理如果chart_info是"考勤情况"，而根据db_info，其应该对应"attendance"这个表单，而你注意到这个表单记录了这个月每位员工的"出勤","迟到","缺勤"等情况
-        那么可以判断coll_info = "attendance", value_info = "考勤"
-        同时判断chart_type适合"bar","line","pie","scatter","heatmap"里哪一种图然后填入       
+        那么可以判断coll_info = "attendance", value_type = "考勤"
+        同时判断chart_type适合"bar","line","pie","scatter","heatmap"里哪一种图然后填入
         你将得到一个str类型的返回值
-        
+
         你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
-        You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type      
+        You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
         mysql_caculator(
             start_index=""，  # 可选，开始日期
             last_index="",   # 可选，结束日期
@@ -154,22 +154,21 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             chart_type=""   # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
         )
         可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb
-        
+
         query_database函数接受一个字符串
         这个字符串非常非常非常重要，是一条mysql指令
         这条指令仅用于查询数据，当你明确用户仅需要查询数据而非分析情况或画图时你调用这个函数，
         **只能根据db_info的数据库表单字段名字和数据类型写指令进行普通查询或条件查询**
         **比如我询问”我想查询视觉组的女队员数据“，那么你就要根据db_info的表单字段，视觉组对应的是jlugroup，你不能自己换成group;又或者性别是sex，你不能写成gender**
         **一定要弄明白每张表的数据类型，数据结构，字段名，严禁传错**
-        
+
         比如说用户问"我想知道data里2020后加入的的五条数据"
         那么你就生成代码"SELECT * FROM Data WHERE age > '2020' LIMIT 5"并传入
         一定要弄明白每张表的数据类型，数据结构，严禁传错
         记住用户是否限定了数量，比如说“第一个”，“一个”，“五条”这种，如果有，比如说一个，那就需要添加”LIMIT 1“
         并且这个函数返回一个字符串
-
         """,
-        context_variables = {"meta_data":db_info},
+        # context_variables = {"meta_data":db_info},
 
         functions=[mongodb_caculator, mysql_caculator, query_database],
     )
@@ -191,29 +190,41 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
     logger.info(f"Assistant: {result_str}")
 
 
-    # chart_list = ["bar", "line", "pie", "scatter", "heatmap", "ranking", "yoy_mom", "multi_field", "chart_type"]
-    # if all(c in result_str[1:35] for c in chart_list):
+    chart_list = ["bar", "line", "pie", "scatter", "heatmap", "ranking", "yoy_mom", "multi_field", "chart_type"]
+    if all(c not in result_str[1:35] for c in chart_list):
 
-    logger.info(f"结果: {result_str}")
 
-    try:
-        result_str = result_str[result_str.find('{'):result_str.rfind('}')+1]
-        result_str = result_str.replace("None", "null").replace('None', 'null')
-        result_str = "["+result_str+"]"
-        result_str = result_str.replace("'", '"')
-        logger.info(f"结果: {result_str}")
-        result_json = json.loads(result_str)
 
-        # result_json = result_json["result"]
-        # logger.info(f"结果: {result_json}")
+        try:
+            result_str = result_str[result_str.find('{'):result_str.rfind('}')+1]
+            result_str = result_str.replace("None", "null").replace('None', 'null')
+            result_str = "["+result_str+"]"
+            result_str = result_str.replace("'", '"')
+            logger.info(f"结果: {result_str}")
+            result_json = json.loads(result_str)
 
-        del hazuki
-        return f"[{result_json}]"
+            # result_json = result_json["result"]
+            # logger.info(f"结果: {result_json}")
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON解析错误: {e}")
-        del hazuki
-        return f"解析错误: {result_str}"
+            del hazuki
+            return f"```{result_json}```"
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON解析错误: {e}")
+            del hazuki
+            return f"解析错误: {result_str}"
+    else:
+        try:
+            result_str = result_str[result_str.find('{'):result_str.rfind('}') + 1]
+            result_json = json.loads(result_str)
+            result_json = result_json["result"]
+            logger.info(f"结果: {result_json}")
+            del hazuki
+            return f"```{result_json}```"
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON解析错误: {e}")
+            del hazuki
+            return f"解析错误: {result_str}"
+
 
 
 def init_agent(

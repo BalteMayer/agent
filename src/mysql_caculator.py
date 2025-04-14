@@ -20,13 +20,13 @@ class ChartCalculator(ABC):
     """基础图表计算器抽象类"""
 
     @abstractmethod
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算图表数据的抽象方法"""
         pass
 
 
 class BarChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算条形图所需的数据"""
         result = {}
         categories = []
@@ -49,27 +49,29 @@ class BarChartCalculator(ChartCalculator):
             values.append(count)
 
         # 计算统计值
-        stats = {
-            "mean": np.mean(values) if values else 0,
-            "median": np.median(values) if values else 0,
-            "max": max(values) if values else 0,
-            "min": min(values) if values else 0,
-            "std": np.std(values) if values else 0,
-            "variance": np.var(values) if values else 0
-        }
+        # stats = {
+        #     "mean": np.mean(values) if values else 0,
+        #     "median": np.median(values) if values else 0,
+        #     "max": max(values) if values else 0,
+        #     "min": min(values) if values else 0,
+        #     "std": np.std(values) if values else 0,
+        #     "variance": np.var(values) if values else 0
+        # }
 
         result = {
             "chart_type": "bar",
-            "categories": categories,
-            "values": values,
-            "statistics": stats
+            "xAxisData": categories,
+            "barData": values,
+            # "statistics": stats
+            "seriesNames": [value_type],
+            "title": f"{table_name}-{value_type} analysis",
         }
 
         return result
 
 
 class LineChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算折线图所需的数据"""
         result = {}
         time_series = []
@@ -109,38 +111,39 @@ class LineChartCalculator(ChartCalculator):
             time_series.append(date)
             values.append(count)
 
-        # 计算趋势和预测
-        if len(values) > 1:
-            values_np = np.array(values)
-            x = np.arange(len(values))
-            z = np.polyfit(x, values_np, 1)
-            trend = z[0]  # 线性趋势斜率
-
-            # 简单的下一个周期预测
-            next_val_pred = np.polyval(z, len(values))
-
-            # 计算移动平均
-            window_size = min(3, len(values))
-            moving_avg = np.convolve(values_np, np.ones(window_size) / window_size, mode='valid').tolist()
-        else:
-            trend = 0
-            next_val_pred = values[0] if values else 0
-            moving_avg = values
+        # # 计算趋势和预测
+        # if len(values) > 1:
+        #     values_np = np.array(values)
+        #     x = np.arange(len(values))
+        #     z = np.polyfit(x, values_np, 1)
+        #     trend = z[0]  # 线性趋势斜率
+        #
+        #     # 简单的下一个周期预测
+        #     next_val_pred = np.polyval(z, len(values))
+        #
+        #     # 计算移动平均
+        #     window_size = min(3, len(values))
+        #     moving_avg = np.convolve(values_np, np.ones(window_size) / window_size, mode='valid').tolist()
+        # else:
+        #     trend = 0
+        #     next_val_pred = values[0] if values else 0
+        #     moving_avg = values
 
         result = {
             "chart_type": "line",
-            "x_axis": time_series,
-            "values": values,
-            "trend": float(trend),
-            "prediction_next": float(next_val_pred),
-            "moving_average": moving_avg
+            "data": values,
+            "xAxisLabels": time_series,
+            # "trend": float(trend),
+            # "prediction_next": float(next_val_pred),
+            # "moving_average": moving_avg
+            "title":f"{date_field}-{value_type}",
         }
 
         return result
 
 
 class PieChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name: str) -> Dict[str, Any]:
         """计算饼图所需的数据"""
 
         logger.info(f"开始计算饼图数据，输入数据量: {len(data)}, 值类型: {value_type}")
@@ -181,16 +184,20 @@ class PieChartCalculator(ChartCalculator):
             labels.append(category)
             values.append(count)
 
-        # 计算百分比
-        total = sum(values)
-        logger.info(f"总计数: {total}")
-        percentages = [round((value / total) * 100, 2) if total > 0 else 0 for value in values]
+        # # 计算百分比
+        # total = sum(values)
+        # logger.info(f"总计数: {total}")
+        # percentages = [round((value / total) * 100, 2) if total > 0 else 0 for value in values]
+
+        pie_data = [{"name": name, "value": value} for name, value in zip(labels, values)]
 
         result = {
             "chart_type": "pie",
-            "labels": labels,
-            "values": values,
-            "percentages": percentages
+            # "labels": labels,
+            # "values": values,
+            "pieData": pie_data,
+            "title": f"{table_name}",
+            # "percentages": percentages
         }
         logger.info(f"饼图计算完成: {len(labels)} 个类别")
 
@@ -198,7 +205,7 @@ class PieChartCalculator(ChartCalculator):
 
 
 class ScatterChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算散点图所需的数据"""
         result = {}
         x_values = []
@@ -280,7 +287,7 @@ class ScatterChartCalculator(ChartCalculator):
 
 
 class HeatMapCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算热力图所需的数据"""
         if not data:
             return {
@@ -367,7 +374,7 @@ class HeatMapCalculator(ChartCalculator):
 class YoYMoMCalculator(ChartCalculator):
     """同比环比计算器"""
 
-    def calculate(self, data: List[Dict[str, Any]], value_type: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
         """计算同比环比数据"""
         if not data:
             return {
@@ -500,7 +507,7 @@ class YoYMoMCalculator(ChartCalculator):
 
 
 class MultiFieldAnalysisCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, group_by_fields: List[str] = None) -> Dict[
+    def calculate(self, data: List[Dict[str, Any]], value_type: str , table_name:str, group_by_fields: List[str] = None) -> Dict[
         str, Any]:
         """多字段组合分析计算
 
@@ -599,8 +606,8 @@ class MultiFieldAnalysisCalculator(ChartCalculator):
 
 
 class RankingCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str,
-                  limit: int = 5, group_by: str = None, ascending: bool = False) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], value_type: str,table_name:str,
+                  limit: int = 5, group_by: str = None , ascending: bool = False) -> Dict[str, Any]:
         if not data:
             return {"ranks": [], "stats": {}}
 
@@ -810,7 +817,7 @@ def get_date_field(connection, table_name):
         if cursor:
             cursor.close()
 
-def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[str] = None,
+def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str] = None,
                         value_type: str = None, table_name: str = None, chart_type: str = None,
                         group_by_fields: List[str] = None, limit: int = 5, group_by: str = None,
                         ascending: bool = False) -> str:
@@ -870,9 +877,9 @@ def query_and_calculate(start_index: Optional[str] = None, last_index: Optional[
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
 
             if chart_type.lower() == "multi_field" and group_by_fields:
-                calculation_result = calculator.calculate(data, value_type, group_by_fields=group_by_fields)
+                calculation_result = calculator.calculate(data, value_type, table_name,group_by_fields=group_by_fields)
             else:
-                calculation_result = calculator.calculate(data, value_type)
+                calculation_result = calculator.calculate(data, value_type, table_name)
 
         # 关闭连接
         connection.close()
