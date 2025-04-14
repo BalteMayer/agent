@@ -31,7 +31,7 @@ def connect_to_mysql(db_info: Dict[str, Any]) -> pymysql.connections.Connection:
             database=database_name
         )
         return connection
-    except pymysql.错误 as err:
+    except BaseException as err:
         print(f"数据库连接错误: {err}")
         raise
 

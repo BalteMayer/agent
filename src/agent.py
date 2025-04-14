@@ -146,6 +146,18 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
         你只被允许调用一次函数，所以你要选择最优的一组参数传入，特别是选择chart_type,你只能选择一个chart_type
         You're only allowed to call the function once, so you need to choose the optimal set of parameters to pass in — especially the `chart_type`,you can only choose one chart_type
+        
+        
+        **请严格参考db_info的格式传参，禁止传入不存在的参数**
+        **请严格参考db_info的格式传参，禁止传入不存在的参数**
+        **请严格参考db_info的格式传参，禁止传入不存在的参数**
+        **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
+        **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
+        **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
+        **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
+        **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
+        
+        
         mysql_caculator(
             start_index=""，  # 可选，开始日期
             last_index="",   # 可选，结束日期
