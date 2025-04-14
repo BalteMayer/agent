@@ -87,9 +87,29 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         model="gpt-4o-mini",
         instructions=
         """
-        你是一个数据分析助手,你的名字是Tomoka，你每次都请务必根据message里的信息判断是mysql还是mongodb，然后调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
-        但当用户仅需要查询时，你就调用query_database函数，获取数据
-
+        你是一个数据查询和分析助手,你每次都请务必根据message里的信息判断是mysql还是mongodb，然后
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+                **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+                **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+                **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        **如果用户需要查询时，你就调用query_database函数，获取数据**
+        
+        
+        如果用户需要数据分析
+        
+            调用mysql_caculator或者mongodb_caculator函数，获取分析结果,
+            
         至于是什么数据库你通过db_info的信息来判断，mysql应该会在很靠前的位置明确说是mysql
 
         mongodb_caculator(start_index: str, last_index: str, value_type, coll_info: str, chart_type: str, group_by_fields: List[str] = None, limit: int = 5, group_by: str = None, ascending: bool = False)
@@ -156,6 +176,14 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
         **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
         **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
+        **画图时组织这个词可以跟jlugroup对应**
+        **画图时组织这个词可以跟jlugroup对应**
+        **画图时组织这个词可以跟jlugroup对应**
+        
+        **总体就是无索引，全部都要**
+        **总体就是无索引，全部都要**
+        **总体就是无索引，全部都要**
+        **总体就是无索引，全部都要**
         
         
         mysql_caculator(
