@@ -207,7 +207,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             # logger.info(f"结果: {result_json}")
 
             del hazuki
-            return f"```{result_json}```"
+            return f"[{result_json}]"
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析错误: {e}")
             del hazuki
@@ -271,7 +271,7 @@ def init_agent(
             注意不是NoneType，而是字符串"None"
             
             最后你将获得一个str类型的返回值，你不能改动它，而是原封不动地返回给用户，同时根据其内容做一些专业的数据分析指导，期望在100字以内，20字以上
-            这个返回值就是长这个结构的东西[{}]，把它原封不动发给用户，不能自己总结。
+            这个返回值就是长这个结构的东西```{}```，把它原封不动发给用户，不能自己总结。
             注意，不论发生什么，返回值必须提供
             
             你不被允许自己总结
