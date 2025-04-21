@@ -28,7 +28,7 @@ def get_or_create_session(session_id, user_id):
 
     # 为每个用户创建独立的agent实例
     if user_id not in user_agents:
-        user_agents[user_id] = init_agent(model_name='gpt-4o')
+        user_agents[user_id] = init_agent(model_name='deepseek-chat')
 
     if combined_id not in sessions:
         sessions[combined_id] = {
@@ -150,7 +150,7 @@ def get_session_messages(session_id, user_id="anonymous"):
 
 # 修改为与默认agent一致
 current_agent_config = {
-    "model_name": "gpt-4o",  # 与agent.py中的默认值保持一致
+    "model_name": "deepseek-chat",  # 与agent.py中的默认值保持一致
 }
 
 

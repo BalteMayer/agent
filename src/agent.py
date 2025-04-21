@@ -2,6 +2,7 @@ from src.caculator import query_and_calculate as mongodb_caculator
 from src.get_db_config import describe_db_info
 from src.mysql_caculator import  mysql_caculator
 from src.query_database import query_database
+from src.query_mongodb import query_mongodb
 from utils import logger
 from utils import condense_msg
 from swarm import Swarm, Agent
@@ -13,6 +14,11 @@ import os
 import sys
 from pathlib import Path
 import re
+
+
+# TODO: 查询函数优化,
+#  计算函数优化, function calling, f(A,B)
+#  提示词
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -84,7 +90,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
     hazuki = Agent(
         name="Tomoka",
-        model="gpt-4o-mini",
+        model="deepseek-chat",
         instructions=
         """
         你是一个数据查询和分析助手,你每次都请务必根据message里的信息判断是mysql还是mongodb，然后
@@ -207,10 +213,24 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         一定要弄明白每张表的数据类型，数据结构，严禁传错
         记住用户是否限定了数量，比如说“第一个”，“一个”，“五条”这种，如果有，比如说一个，那就需要添加”LIMIT 1“
         并且这个函数返回一个字符串
+        
+        **query_mongodb函数接受一个字符串,格式为**
+        db.集合名.操作({查询条件})这样的mongodb查询语句
+        比如查询杨二所在的部门，那就是
+        db.department.find({名字: "杨二"}, {部门: 1, "_id": 0})
+        而不是
+        db.departments.find({"名字": "杨二"}, {"部门": 1, "_id": 0})
+        **请特别注意双引号还是单引号还是没有引号的问题**
+        **请特别注意双引号还是单引号还是没有引号的问题**
+        **请特别注意双引号还是单引号还是没有引号的问题**
+        **键不要加引号**
+        **键不要加引号**
+        **键不要加引号**、
+        **键不要加引号**
         """,
         # context_variables = {"meta_data":db_info},
 
-        functions=[mongodb_caculator, mysql_caculator, query_database],
+        functions=[mongodb_caculator, mysql_caculator, query_database, query_mongodb],
     )
 
 
@@ -268,7 +288,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
 
 
 def init_agent(
-        model_name: str = 'gpt-4o-mini',
+        model_name: str = 'deepseek-chat',
         # model_name: str = 'deepseek-chat',
 ):
 
@@ -338,7 +358,7 @@ def init_agent(
 
 
 if __name__ == '__main__':
-    agent_main = init_agent(model_name='gpt-4o')
+    agent_main = init_agent(model_name='deepseek-chat')
     # TODO: 新开页面，记忆，functions
     response = swarm_client.run(agent_main,messages=[{"role":"user","content":"你好"}])
     print(response)
