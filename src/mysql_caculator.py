@@ -619,7 +619,8 @@ def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
     """
     cursor = None
     try:
-        cursor = connection.cursor(dictionary=True)
+        import pymysql
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
 
         # 检查两个表是否相同
         if x_table == y_table:
@@ -929,3 +930,4 @@ if __name__ == "__main__":
         y_table="Data",
         chart_type="pie"  # 生成饼图
     )
+    print(result)
