@@ -1,6 +1,5 @@
 import json
 import os
-import mysql.connector
 from datetime import datetime, date
 import numpy as np
 from abc import ABC, abstractmethod
@@ -20,26 +19,28 @@ class ChartCalculator(ABC):
     """基础图表计算器抽象类"""
 
     @abstractmethod
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算图表数据的抽象方法"""
         pass
 
 
 class BarChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算条形图所需的数据"""
         result = {}
         categories = []
         values = []
 
-        # 根据value_type进行分组计算
+        # 根据x_field进行分组计算
         if not data:
             return {"categories": [], "values": [], "statistics": {"mean": 0, "median": 0, "max": 0, "min": 0}}
 
         value_counts = {}
         for item in data:
-            if value_type in item:
-                category = item[value_type]
+            if x_field in item:
+                category = item[x_field]
                 if category not in value_counts:
                     value_counts[category] = 0
                 value_counts[category] += 1
@@ -48,62 +49,45 @@ class BarChartCalculator(ChartCalculator):
             categories.append(category)
             values.append(count)
 
-        # 计算统计值
-        # stats = {
-        #     "mean": np.mean(values) if values else 0,
-        #     "median": np.median(values) if values else 0,
-        #     "max": max(values) if values else 0,
-        #     "min": min(values) if values else 0,
-        #     "std": np.std(values) if values else 0,
-        #     "variance": np.var(values) if values else 0
-        # }
-
         result = {
             "chart_type": "bar",
             "xAxisData": categories,
             "barData": values,
-            # "statistics": stats
-            "seriesNames": [value_type],
-            "title": f"{table_name}-{value_type} analysis",
+            "seriesNames": [x_field],
+            "title": f"{x_table}.{x_field} - {y_table}.{y_field} analysis",
         }
 
         return result
 
 
 class LineChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算折线图所需的数据"""
         result = {}
         time_series = []
         values = []
 
-        # 假设数据中有日期字段
-        date_field = None
-        for field in data[0].keys() if data else []:
-            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time', 'created_at']):
-                date_field = field
-                break
-
-        if not date_field and data:
-            date_field = list(data[0].keys())[0]  # 如果找不到日期字段，使用第一个字段
+        if not data:
+            return {
+                "chart_type": "line",
+                "data": [],
+                "xAxisLabels": [],
+                "title": f"{x_field}-{y_field}"
+            }
 
         # 按日期排序数据
-        if date_field:
-            sorted_data = sorted(data, key=lambda x: x.get(date_field, ''))
-        else:
-            sorted_data = data
+        sorted_data = sorted(data, key=lambda x: x.get(x_field, ''))
 
-        # 根据value_type进行时间序列统计
+        # 根据y_field进行时间序列统计
         date_counts = {}
         for item in sorted_data:
-            if date_field and value_type in item:
-                date = item.get(date_field, '')
+            if x_field in item and y_field in item:
+                date = item.get(x_field, '')
                 if date not in date_counts:
                     date_counts[date] = 0
-                if item[value_type] == value_type:  # 如果值等于value_type本身
-                    date_counts[date] += 1
-                elif isinstance(item[value_type], (int, float)):  # 如果值是数字
-                    date_counts[date] += item[value_type]
+                if isinstance(item[y_field], (int, float)):  # 如果值是数字
+                    date_counts[date] += item[y_field]
                 else:  # 否则计数
                     date_counts[date] += 1
 
@@ -111,72 +95,59 @@ class LineChartCalculator(ChartCalculator):
             time_series.append(date)
             values.append(count)
 
-        # # 计算趋势和预测
-        # if len(values) > 1:
-        #     values_np = np.array(values)
-        #     x = np.arange(len(values))
-        #     z = np.polyfit(x, values_np, 1)
-        #     trend = z[0]  # 线性趋势斜率
-        #
-        #     # 简单的下一个周期预测
-        #     next_val_pred = np.polyval(z, len(values))
-        #
-        #     # 计算移动平均
-        #     window_size = min(3, len(values))
-        #     moving_avg = np.convolve(values_np, np.ones(window_size) / window_size, mode='valid').tolist()
-        # else:
-        #     trend = 0
-        #     next_val_pred = values[0] if values else 0
-        #     moving_avg = values
-
         result = {
             "chart_type": "line",
             "data": values,
             "xAxisLabels": time_series,
-            # "trend": float(trend),
-            # "prediction_next": float(next_val_pred),
-            # "moving_average": moving_avg
-            "title":f"{date_field}-{value_type}",
+            "title": f"{x_table}.{x_field} - {y_table}.{y_field}",
         }
 
         return result
 
 
 class PieChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name: str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算饼图所需的数据"""
 
-        logger.info(f"开始计算饼图数据，输入数据量: {len(data)}, 值类型: {value_type}")
+        logger.info(f"开始计算饼图数据，输入数据量: {len(data)}, X字段: {x_field}, Y字段: {y_field}")
         result = {}
         labels = []
         values = []
 
-        # 根据value_type进行分组计算
-        # 记录数据中是否包含value_type字段
+        # 根据x_field进行分组计算
+        # 记录数据中是否包含y_field和x_field字段
         if data and len(data) > 0:
             sample_keys = list(data[0].keys())
             logger.info(f"数据样本包含的字段: {sample_keys}")
-            if value_type not in sample_keys:
-                logger.error(f"数据中不存在字段 {value_type}，可用字段为: {sample_keys}")
+            missing_fields = []
+            if y_field not in sample_keys:
+                missing_fields.append(y_field)
+            if x_field not in sample_keys:
+                missing_fields.append(x_field)
+
+            if missing_fields:
+                logger.error(f"数据中不存在字段: {missing_fields}，可用字段为: {sample_keys}")
                 return {
                     "chart_type": "pie",
-                    "error": f"字段 {value_type} 不存在",
+                    "error": f"字段 {missing_fields} 不存在",
                     "available_fields": sample_keys,
-                    "labels": [],
-                    "values": [],
-                    "percentages": []
+                    "pieData": []
                 }
-
 
         value_counts = {}
         for item in data:
-            if value_type in item:
-                category = item[value_type]
+            if x_field in item:
+                category = item[x_field]
                 if category not in value_counts:
                     value_counts[category] = 0
-                value_counts[category] += 1
-            else:
-                logger.warning(f"跳过一条不包含字段 {value_type} 的数据")
+                if y_field in item:
+                    if isinstance(item[y_field], (int, float)):
+                        value_counts[category] += item[y_field]
+                    else:
+                        value_counts[category] += 1
+                else:
+                    logger.warning(f"跳过一条不包含字段 {y_field} 的数据")
 
         logger.info(f"分组统计结果: {value_counts}")
 
@@ -184,20 +155,12 @@ class PieChartCalculator(ChartCalculator):
             labels.append(category)
             values.append(count)
 
-        # # 计算百分比
-        # total = sum(values)
-        # logger.info(f"总计数: {total}")
-        # percentages = [round((value / total) * 100, 2) if total > 0 else 0 for value in values]
-
         pie_data = [{"name": name, "value": value} for name, value in zip(labels, values)]
 
         result = {
             "chart_type": "pie",
-            # "labels": labels,
-            # "values": values,
             "pieData": pie_data,
-            "title": f"{table_name}",
-            # "percentages": percentages
+            "title": f"{x_table}.{x_field} - {y_table}.{y_field}",
         }
         logger.info(f"饼图计算完成: {len(labels)} 个类别")
 
@@ -205,7 +168,8 @@ class PieChartCalculator(ChartCalculator):
 
 
 class ScatterChartCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算散点图所需的数据"""
         result = {}
         x_values = []
@@ -213,10 +177,11 @@ class ScatterChartCalculator(ChartCalculator):
 
         if not data:
             return {
+                "chart_type": "scatter",
                 "x": [],
                 "y": [],
-                "x_field": "",
-                "y_field": value_type,
+                "x_field": x_field,
+                "y_field": y_field,
                 "correlation": 0,
                 "regression": {
                     "slope": 0,
@@ -225,27 +190,12 @@ class ScatterChartCalculator(ChartCalculator):
                 }
             }
 
-        # 寻找可能的数值字段作为x轴
-        numeric_fields = []
-        for field in data[0].keys():
-            if field != value_type:
-                try:
-                    # 检查第一个元素是否可以转换为数字
-                    if isinstance(data[0][field], (int, float)) or (
-                            isinstance(data[0][field], str) and data[0][field].replace('.', '', 1).isdigit()):
-                        numeric_fields.append(field)
-                except (KeyError, ValueError, TypeError):
-                    pass
-
-        x_field = numeric_fields[0] if numeric_fields else list(data[0].keys())[0]
-
         # 提取数据点
         for item in data:
-            if value_type in item and x_field in item:
+            if y_field in item and x_field in item:
                 try:
                     x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else item[x_field]
-                    y_val = float(item[value_type]) if not isinstance(item[value_type], (int, float)) else item[
-                        value_type]
+                    y_val = float(item[y_field]) if not isinstance(item[y_field], (int, float)) else item[y_field]
                     x_values.append(x_val)
                     y_values.append(y_val)
                 except (ValueError, TypeError):
@@ -274,7 +224,7 @@ class ScatterChartCalculator(ChartCalculator):
             "x": x_values,
             "y": y_values,
             "x_field": x_field,
-            "y_field": value_type,
+            "y_field": y_field,
             "correlation": float(correlation) if not np.isnan(correlation) else 0,
             "regression": {
                 "slope": float(slope),
@@ -287,14 +237,16 @@ class ScatterChartCalculator(ChartCalculator):
 
 
 class HeatMapCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算热力图所需的数据"""
         if not data:
             return {
+                "chart_type": "heatmap",
                 "x_labels": [],
                 "y_labels": [],
-                "x_field": "",
-                "y_field": "",
+                "x_field": x_field,
+                "y_field": y_field,
                 "matrix": [],
                 "max_value": 0,
                 "min_value": 0
@@ -302,54 +254,29 @@ class HeatMapCalculator(ChartCalculator):
 
         result = {}
 
-        # 寻找两个适合作为坐标轴的字段
+        # 寻找另一个适合作为y轴的字段
         fields = list(data[0].keys())
-        fields = [f for f in fields if f != value_type]
+        fields = [f for f in fields if f != x_field and f != y_field]
 
-        if len(fields) < 2:
-            # 如果没有足够的字段，尝试创建时间段作为第二个维度
-            date_field = None
-            for field in data[0].keys():
-                if any(date_keyword in field.lower() for date_keyword in
-                       ['日期', 'date', '时间', 'time', 'created_at']):
-                    date_field = field
-                    break
-
-            if date_field:
-                # 创建时间段
-                time_periods = []
-                for item in data:
-                    time_periods.append(item[date_field])
-                unique_periods = sorted(set(time_periods))
-
-                x_field = fields[0]
-                y_field = date_field
-            else:
-                x_field = fields[0]
-                y_field = value_type
-        else:
-            x_field = fields[0]
-            y_field = fields[1]
+        z_field = fields[0] if fields else y_field
 
         # 提取唯一的x和y值
         x_values = sorted(set(item[x_field] for item in data if x_field in item))
-        y_values = sorted(set(item[y_field] for item in data if y_field in item))
+        y_values = sorted(set(item[z_field] for item in data if z_field in item))
 
         # 创建热力图矩阵
         matrix = np.zeros((len(y_values), len(x_values)))
 
         # 填充矩阵
         for item in data:
-            if x_field in item and y_field in item and value_type in item:
+            if x_field in item and z_field in item and y_field in item:
                 try:
                     x_idx = x_values.index(item[x_field])
-                    y_idx = y_values.index(item[y_field])
+                    y_idx = y_values.index(item[z_field])
 
-                    # 根据value_type累加值
-                    if isinstance(item[value_type], (int, float)):
-                        matrix[y_idx][x_idx] += item[value_type]
-                    elif item[value_type] == value_type:
-                        matrix[y_idx][x_idx] += 1
+                    # 根据y_field累加值
+                    if isinstance(item[y_field], (int, float)):
+                        matrix[y_idx][x_idx] += item[y_field]
                     else:
                         matrix[y_idx][x_idx] += 1
                 except (ValueError, TypeError):
@@ -360,6 +287,7 @@ class HeatMapCalculator(ChartCalculator):
             "x_labels": x_values,
             "y_labels": y_values,
             "x_field": x_field,
+            "z_field": z_field,
             "y_field": y_field,
             "matrix": matrix.tolist(),
             "max_value": float(np.max(matrix)),
@@ -374,10 +302,12 @@ class HeatMapCalculator(ChartCalculator):
 class YoYMoMCalculator(ChartCalculator):
     """同比环比计算器"""
 
-    def calculate(self, data: List[Dict[str, Any]], value_type: str, table_name:str) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str) -> Dict[str, Any]:
         """计算同比环比数据"""
         if not data:
             return {
+                "chart_type": "yoy_mom",
                 "current_period": {},
                 "previous_period": {},
                 "previous_year": {},
@@ -386,21 +316,12 @@ class YoYMoMCalculator(ChartCalculator):
             }
 
         result = {}
-        # 寻找日期字段
-        date_field = None
-        for field in data[0].keys():
-            if any(date_keyword in field.lower() for date_keyword in ['日期', 'date', '时间', 'time', 'created_at']):
-                date_field = field
-                break
-
-        if not date_field:
-            return {"error": "无法找到日期字段"}
 
         # 解析日期并提取年月信息
         date_data = {}
         for item in data:
-            if date_field in item and value_type in item:
-                date_str = item[date_field]
+            if x_field in item and y_field in item:
+                date_str = item[x_field]
                 try:
                     # 处理不同的日期格式
                     if 'T' in date_str:  # ISO格式 (2023-04-16T12:30:45)
@@ -424,9 +345,9 @@ class YoYMoMCalculator(ChartCalculator):
                             }
 
                         # 根据值类型进行聚合
-                        if isinstance(item[value_type], (int, float)):
-                            date_data[year_month]["sum"] += item[value_type]
-                            date_data[year_month]["values"].append(item[value_type])
+                        if isinstance(item[y_field], (int, float)):
+                            date_data[year_month]["sum"] += item[y_field]
+                            date_data[year_month]["values"].append(item[y_field])
                         else:
                             date_data[year_month]["count"] += 1
                 except Exception:
@@ -436,7 +357,10 @@ class YoYMoMCalculator(ChartCalculator):
         sorted_year_months = sorted(date_data.keys())
 
         if not sorted_year_months:
-            return {"error": "无有效数据点"}
+            return {
+                "chart_type": "yoy_mom",
+                "error": "无有效数据点"
+            }
 
         # 计算当前期间、上期和去年同期
         current_period = sorted_year_months[-1]
@@ -506,169 +430,22 @@ class YoYMoMCalculator(ChartCalculator):
         return result
 
 
-class MultiFieldAnalysisCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str , table_name:str, group_by_fields: List[str] = None) -> Dict[
-        str, Any]:
-        """多字段组合分析计算
-
-        参数:
-        - data: 数据列表
-        - value_type: 要分析的数据字段
-        - group_by_fields: 分组字段列表 (如果为None，将尝试自动选择合适的分组字段)
-        """
-        if not data:
-            return {"groups": [], "summary": {}}
-
-        if not group_by_fields:
-            excluded_fields = [value_type]
-            group_by_fields = []
-
-            for field in data[0].keys():
-                if field not in excluded_fields and not any(keyword in field.lower()
-                                                            for keyword in ['id', '_id', '日期', 'date', '时间', 'time',
-                                                                            'created_at']):
-                    group_by_fields.append(field)
-                    if len(group_by_fields) >= 2:
-                        break
-
-        if not group_by_fields:
-            return {"error": "无法确定分组字段"}
-
-        grouped_data = {}
-        group_values = {field: set() for field in group_by_fields}
-
-        for item in data:
-            group_key_parts = []
-            valid_item = True
-
-            for field in group_by_fields:
-                if field in item:
-                    group_key_parts.append(str(item[field]))
-                    group_values[field].add(str(item[field]))
-                else:
-                    valid_item = False
-                    break
-
-            if not valid_item:
-                continue
-
-            group_key = tuple(group_key_parts)
-
-            if group_key not in grouped_data:
-                grouped_data[group_key] = {
-                    "count": 0,
-                    "sum": 0,
-                    "values": []
-                }
-
-            if value_type in item:
-                grouped_data[group_key]["count"] += 1
-
-                if isinstance(item[value_type], (int, float)):
-                    grouped_data[group_key]["sum"] += item[value_type]
-                    grouped_data[group_key]["values"].append(item[value_type])
-                elif item[value_type] == value_type:
-                    grouped_data[group_key]["sum"] += 1
-                else:
-                    grouped_data[group_key]["values"].append(item[value_type])
-
-        groups = []
-        for group_key, group_data in grouped_data.items():
-            group_info = {}
-
-            for i, field in enumerate(group_by_fields):
-                group_info[field] = group_key[i]
-
-            group_info["count"] = group_data["count"]
-            group_info["sum"] = group_data["sum"]
-            group_info["avg"] = np.mean(group_data["values"]) if group_data["values"] else 0
-
-            if group_data["values"]:
-                group_info["min"] = min(group_data["values"])
-                group_info["max"] = max(group_data["values"])
-
-            groups.append(group_info)
-
-        summary = {
-            "total_groups": len(groups),
-            "dimensions": group_by_fields,
-            "total_records": sum(g["count"] for g in groups),
-            "total_sum": sum(g["sum"] for g in groups)
-        }
-
-        dimension_values = {field: sorted(list(values)) for field, values in group_values.items()}
-
-        return {
-            "groups": groups,
-            "summary": summary,
-            "dimension_values": dimension_values
-        }
-
-
 class RankingCalculator(ChartCalculator):
-    def calculate(self, data: List[Dict[str, Any]], value_type: str,table_name:str,
-                  limit: int = 5, group_by: str = None , ascending: bool = False) -> Dict[str, Any]:
+    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+                  y_table: str, limit: int = 5, ascending: bool = False) -> Dict[str, Any]:
         if not data:
-            return {"ranks": [], "stats": {}}
-
-        try:
-            db_info = load_db_config()
-        except Exception:
-            db_info = {}
-
-        if group_by and group_by not in data[0]:
-            primary_key = None
-            for key in ["姓名", "名字", "学生", "员工", "用户", "name", "nickname"]:
-                if key in data[0]:
-                    primary_key = key
-                    break
-
-            if primary_key:
-                tables = db_info.get("mysql", {}).get("tables", {})
-                auxiliary_table = None
-                auxiliary_key = None
-
-                for table_name, table_info in tables.items():
-                    fields = table_info.get("fields", {})
-                    if group_by in fields:
-                        auxiliary_table = table_name
-
-                        for field in fields:
-                            if field in ["姓名", "名字", "学生", "员工", "用户", "name", "nickname"]:
-                                auxiliary_key = field
-                                break
-                        if auxiliary_key:
-                            break
-
-                if auxiliary_table and auxiliary_key:
-                    join_config = {
-                        "auxiliary_table": auxiliary_table,
-                        "primary_key": primary_key,
-                        "auxiliary_key": auxiliary_key,
-                        "fields_to_include": [group_by]
-                    }
-
-                    data = enrich_data_with_relations(data, join_config, db_info)
-
-        if group_by and (not data or group_by not in data[0]):
-            potential_fields = []
-            for field in data[0].keys():
-                if field != value_type and not any(keyword in field.lower()
-                                                   for keyword in
-                                                   ['id', '_id', '日期', 'date', '时间', 'time', 'created_at']):
-                    potential_fields.append(field)
-
-            group_by = potential_fields[0] if potential_fields else None
-
-        if not group_by:
-            return {"error": "无法确定分组字段"}
+            return {
+                "chart_type": "ranking",
+                "ranks": [],
+                "stats": {}
+            }
 
         aggregations = [
-            {"type": "count", "field": value_type, "output": "total"},
-            {"type": "count", "field": value_type, "condition": {value_type: "出勤"}, "output": "matches"}
+            {"type": "count", "field": y_field, "output": "total"},
+            {"type": "count", "field": y_field, "condition": {y_field: "出勤"}, "output": "matches"}
         ]
 
-        grouped_data = group_and_aggregate(data, group_by, value_type, aggregations)
+        grouped_data = group_and_aggregate(data, x_field, y_field, aggregations)
 
         derived_metrics = [
             {
@@ -698,8 +475,8 @@ class RankingCalculator(ChartCalculator):
         return {
             "chart_type": "ranking",
             "ranks": result_data,
-            "group_by": group_by,
-            "value_type": value_type,
+            "group_by": x_field,
+            "value_field": y_field,
             "stats": overall_stats
         }
 
@@ -714,7 +491,7 @@ class ChartCalculatorFactory:
             "scatter": ScatterChartCalculator,
             "heatmap": HeatMapCalculator,
             "yoy_mom": YoYMoMCalculator,
-            "multi_field": MultiFieldAnalysisCalculator,
+            # "multi_field": MultiFieldAnalysisCalculator,
             "ranking": RankingCalculator
         }
 
@@ -817,22 +594,220 @@ def get_date_field(connection, table_name):
         if cursor:
             cursor.close()
 
-def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str] = None,
-                        value_type: str = None, table_name: str = None, chart_type: str = None,
-                        group_by_fields: List[str] = None, limit: int = 5, group_by: str = None,
-                        ascending: bool = False) -> str:
+
+def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
+                           x_index_field=None, x_start_index=None, x_end_index=None,
+                           y_index_field=None, y_start_index=None, y_end_index=None):
+    """
+    从两个表中查询数据并合并结果，支持对两表分别应用过滤条件
+
+    参数:
+    - connection: 数据库连接
+    - x_table: X轴字段所在的表
+    - y_table: Y轴字段所在的表
+    - x_field: X轴字段名
+    - y_field: Y轴字段名
+    - x_index_field: X表的索引/过滤字段
+    - x_start_index: X表索引字段的起始值
+    - x_end_index: X表索引字段的结束值
+    - y_index_field: Y表的索引/过滤字段
+    - y_start_index: Y表索引字段的起始值
+    - y_end_index: Y表索引字段的结束值
+
+    返回:
+    - 包含两个表中字段的数据列表
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # 检查两个表是否相同
+        if x_table == y_table:
+            # 如果在同一个表，直接查询
+            query = f"SELECT * FROM `{x_table}`"
+            conditions = []
+
+            # 合并X和Y的过滤条件
+            if x_index_field and x_start_index:
+                conditions.append(f"`{x_index_field}` >= %s")
+            if x_index_field and x_end_index:
+                conditions.append(f"`{x_index_field}` <= %s")
+
+            if y_index_field and y_start_index and y_index_field != x_index_field:
+                conditions.append(f"`{y_index_field}` >= %s")
+            if y_index_field and y_end_index and y_index_field != x_index_field:
+                conditions.append(f"`{y_index_field}` <= %s")
+
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+
+            params = []
+            if x_index_field and x_start_index:
+                params.append(x_start_index)
+            if x_index_field and x_end_index:
+                params.append(x_end_index)
+
+            if y_index_field and y_start_index and y_index_field != x_index_field:
+                params.append(y_start_index)
+            if y_index_field and y_end_index and y_index_field != x_index_field:
+                params.append(y_end_index)
+
+            cursor.execute(query, params)
+            return cursor.fetchall()
+        else:
+            # 如果在不同表，需要查找关联字段并执行联合查询
+            # 首先检查两个表是否有共同的ID字段
+            cursor.execute(f"DESCRIBE `{x_table}`")
+            x_table_columns = [col[0] for col in cursor.fetchall()]
+
+            cursor.execute(f"DESCRIBE `{y_table}`")
+            y_table_columns = [col[0] for col in cursor.fetchall()]
+
+            # 寻找可能的连接键
+            common_columns = set(x_table_columns) & set(y_table_columns)
+            join_keys = [col for col in common_columns if 'id' in col.lower() or col.lower().endswith('_id')]
+
+            if join_keys:
+                join_key = join_keys[0]
+                # 构建JOIN查询
+                query = f"""
+                SELECT 
+                    x.`{x_field}`, 
+                    y.`{y_field}`,
+                    x.*,
+                    y.*
+                FROM 
+                    `{x_table}` x
+                JOIN 
+                    `{y_table}` y ON x.`{join_key}` = y.`{join_key}`
+                """
+
+                conditions = []
+                # X表过滤条件
+                if x_index_field and x_start_index:
+                    conditions.append(f"x.`{x_index_field}` >= %s")
+                if x_index_field and x_end_index:
+                    conditions.append(f"x.`{x_index_field}` <= %s")
+
+                # Y表过滤条件
+                if y_index_field and y_start_index:
+                    conditions.append(f"y.`{y_index_field}` >= %s")
+                if y_index_field and y_end_index:
+                    conditions.append(f"y.`{y_index_field}` <= %s")
+
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+
+                params = []
+                if x_index_field and x_start_index:
+                    params.append(x_start_index)
+                if x_index_field and x_end_index:
+                    params.append(x_end_index)
+
+                if y_index_field and y_start_index:
+                    params.append(y_start_index)
+                if y_index_field and y_end_index:
+                    params.append(y_end_index)
+
+                cursor.execute(query, params)
+                return cursor.fetchall()
+            else:
+                # 如果找不到共同键，则分别查询两个表并在应用层合并
+                x_query = f"SELECT * FROM `{x_table}`"
+                y_query = f"SELECT * FROM `{y_table}`"
+
+                # X表过滤条件
+                x_conditions = []
+                if x_index_field and x_start_index:
+                    x_conditions.append(f"`{x_index_field}` >= %s")
+                if x_index_field and x_end_index:
+                    x_conditions.append(f"`{x_index_field}` <= %s")
+
+                if x_conditions:
+                    x_query += " WHERE " + " AND ".join(x_conditions)
+
+                x_params = []
+                if x_index_field and x_start_index:
+                    x_params.append(x_start_index)
+                if x_index_field and x_end_index:
+                    x_params.append(x_end_index)
+
+                # Y表过滤条件
+                y_conditions = []
+                if y_index_field and y_start_index:
+                    y_conditions.append(f"`{y_index_field}` >= %s")
+                if y_index_field and y_end_index:
+                    y_conditions.append(f"`{y_index_field}` <= %s")
+
+                if y_conditions:
+                    y_query += " WHERE " + " AND ".join(y_conditions)
+
+                y_params = []
+                if y_index_field and y_start_index:
+                    y_params.append(y_start_index)
+                if y_index_field and y_end_index:
+                    y_params.append(y_end_index)
+
+                cursor.execute(x_query, x_params)
+                x_data = cursor.fetchall()
+
+                cursor.execute(y_query, y_params)
+                y_data = cursor.fetchall()
+
+                # 合并数据 - 创建笛卡尔积
+                combined_data = []
+                for x_item in x_data:
+                    for y_item in y_data:
+                        merged_item = {}
+                        merged_item.update(x_item)
+                        # 避免字段名冲突
+                        for k, v in y_item.items():
+                            if k in merged_item and k != y_field:
+                                merged_item[f"{y_table}_{k}"] = v
+                            else:
+                                merged_item[k] = v
+                        combined_data.append(merged_item)
+
+                return combined_data
+    except Exception as e:
+        logger.error(f"查询数据时出错: {e}")
+        return []
+    finally:
+        if cursor:
+            cursor.close()
+
+
+def mysql_caculator(
+        x_field: str,
+        y_field: str,
+        x_table: str,
+        y_table: str,
+        x_index_field: Optional[str] = None,
+        x_start_index: Optional[str] = None,
+        x_end_index: Optional[str] = None,
+        y_index_field: Optional[str] = None,
+        y_start_index: Optional[str] = None,
+        y_end_index: Optional[str] = None,
+        chart_type: str = "bar",
+        limit: int = 5,
+        ascending: bool = False
+) -> str:
     """
     根据配置连接MySQL数据库，查询指定范围(可选)数据，并根据图表类型进行计算
 
     参数:
-    - start_index: 可选的起始索引(日期等)
-    - last_index: 可选的结束索引
-    - value_type: 要分析的数据字段
-    - table_name: 表名
-    - chart_type: 图表类型
-    - group_by_fields: 多字段分析时的分组字段列表
+    - x_field: X轴字段名
+    - y_field: Y轴字段名
+    - x_table: X轴字段所在的表名
+    - y_table: Y轴字段所在的表名
+    - x_index_field: X表的索引/过滤字段
+    - x_start_index: X表索引字段的起始值
+    - x_end_index: X表索引字段的结束值
+    - y_index_field: Y表的索引/过滤字段
+    - y_start_index: Y表索引字段的起始值
+    - y_end_index: Y表索引字段的结束值
+    - chart_type: 图表类型，默认为柱状图
     - limit: 排名分析时返回的最大数量，默认为5
-    - group_by: 排名分析的分组字段
     - ascending: 排序方向，True为升序，False为降序
 
     返回:
@@ -840,7 +815,10 @@ def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str]
     """
 
     logger.info(
-        f"开始查询MySQL数据: {table_name}, 字段: {value_type}起始索引: {start_index}, 结束索引: {last_index}, 图表类型: {chart_type}")
+        f"开始查询MySQL数据: X表={x_table}, X字段={x_field}, Y表={y_table}, Y字段={y_field}, "
+        f"X索引字段={x_index_field}, X起始={x_start_index}, X结束={x_end_index}, "
+        f"Y索引字段={y_index_field}, Y起始={y_start_index}, Y结束={y_end_index}, "
+        f"图表类型: {chart_type}")
 
     try:
         # 加载数据库配置
@@ -859,27 +837,29 @@ def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str]
         connection = connect_to_mysql(mysql_info)
         logger.info(f"成功连接到MySQL数据库: {mysql_info.get('host')}:{mysql_info.get('port')}")
 
-
-        date_field = get_date_field(connection, table_name)
-        logger.info(f"使用日期字段: {date_field}")
-
         # 查询数据
-        logger.info(f"查询表 {table_name} 的数据...")
-        data = query_data(connection, table_name, start_index, last_index, date_field)
+        logger.info(f"查询表 {x_table} 和 {y_table} 的数据...")
+        data = query_data_from_tables(
+            connection,
+            x_table, y_table,
+            x_field, y_field,
+            x_index_field, x_start_index, x_end_index,
+            y_index_field, y_start_index, y_end_index
+        )
         logger.info(f"查询完成，获取到 {len(data)} 条记录")
 
         # 根据图表类型执行计算
         logger.info(f"开始计算 {chart_type} 类型的图表数据...")
-        if chart_type.lower() == "ranking":
-            calculator = RankingCalculator()
-            calculation_result = calculator.calculate(data, value_type, limit, group_by, ascending)
-        else:
-            calculator = ChartCalculatorFactory.create_calculator(chart_type)
+        calculator = ChartCalculatorFactory.create_calculator(chart_type)
 
-            if chart_type.lower() == "multi_field" and group_by_fields:
-                calculation_result = calculator.calculate(data, value_type, table_name,group_by_fields=group_by_fields)
-            else:
-                calculation_result = calculator.calculate(data, value_type, table_name)
+        if chart_type.lower() == "ranking":
+            # 使用RankingCalculator时传入额外的limit和ascending参数
+            ranking_calculator = RankingCalculator()
+            calculation_result = ranking_calculator.calculate(
+                data, x_field, y_field, x_table, y_table, limit, ascending
+            )
+        else:
+            calculation_result = calculator.calculate(data, x_field, y_field, x_table, y_table)
 
         # 关闭连接
         connection.close()
@@ -888,11 +868,21 @@ def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str]
         # 构建结果
         result = {
             "chart_type": chart_type,
-            "table": table_name,
-            "value_type": value_type,
-            "time_range": {
-                "start": start_index if start_index else "全部",
-                "end": last_index if last_index else "全部"
+            "x_table": x_table,
+            "y_table": y_table,
+            "x_field": x_field,
+            "y_field": y_field,
+            "filters": {
+                "x_filter": {
+                    "field": x_index_field,
+                    "start": x_start_index,
+                    "end": x_end_index
+                },
+                "y_filter": {
+                    "field": y_index_field,
+                    "start": y_start_index,
+                    "end": y_end_index
+                }
             },
             "data_count": len(data),
             "result": calculation_result
@@ -909,12 +899,33 @@ def mysql_caculator(start_index: Optional[str] = None, last_index: Optional[str]
         error_result = {
             "error": str(e),
             "chart_type": chart_type,
-            "table": table_name,
-            "value_type": value_type,
-            "time_range": {
-                "start": start_index if start_index else "全部",
-                "end": last_index if last_index else "全部"
+            "x_table": x_table,
+            "y_table": y_table,
+            "x_field": x_field,
+            "y_field": y_field,
+            "filters": {
+                "x_filter": {
+                    "field": x_index_field,
+                    "start": x_start_index,
+                    "end": x_end_index
+                },
+                "y_filter": {
+                    "field": y_index_field,
+                    "start": y_start_index,
+                    "end": y_end_index
+                }
             }
         }
 
         return json.dumps(error_result, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    # 校区人员分布分析
+    result = mysql_caculator(
+        x_field="school",  # X轴使用校区
+        y_field="ID",  # Y轴用ID计数
+        x_table="Data",  # 从人员数据表获取数据
+        y_table="Data",
+        chart_type="pie"  # 生成饼图
+    )
