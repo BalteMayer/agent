@@ -922,12 +922,20 @@ def mysql_caculator(
 
 
 if __name__ == "__main__":
-    # 校区人员分布分析
+
+    # 柱状图示例 - 分析不同组别的人数
     result = mysql_caculator(
-        x_field="school",  # X轴使用校区
-        y_field="ID",  # Y轴用ID计数
-        x_table="Data",  # 从人员数据表获取数据
-        y_table="Data",
-        chart_type="pie"  # 生成饼图
+        x_field="jlugroup",  # X轴字段名 - 组别
+        y_field = "ID",  # Y轴字段名 - 使用ID进行计数
+        x_table = "Data",  # X轴字段所在的表名
+        y_table = "Data",  # Y轴字段所在的表名
+        x_index_field = "school",  # X表的索引/过滤字段 - 根据校区筛选
+        x_start_index = "南湖校区",  # X表索引字段的起始值
+        x_end_index = "南湖校区",  # X表索引字段的结束值
+        y_index_field = "identity",  # Y表的索引/过滤字段 - 根据身份筛选
+        y_start_index = "正式队员",  # Y表索引字段的起始值
+        y_end_index = "正式队员",  # Y表索引字段的结束值
+        chart_type = "bar"  # 图表类型 - 生成柱状图
     )
+
     print(result)

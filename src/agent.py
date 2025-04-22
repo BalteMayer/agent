@@ -102,14 +102,6 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         **如果用户需要查询时，你就调用query_database函数，获取数据**
         **如果用户需要查询时，你就调用query_database函数，获取数据**
         **如果用户需要查询时，你就调用query_database函数，获取数据**
-                **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-                **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
         
         
         如果用户需要数据分析
@@ -176,30 +168,33 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         
         **请严格参考db_info的格式传参，禁止传入不存在的参数**
         **请严格参考db_info的格式传参，禁止传入不存在的参数**
-        **请严格参考db_info的格式传参，禁止传入不存在的参数**
-        **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
         **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
         **例如我问”帮我分析我的组织的分组情况“，而假如分组情况存在jlugorup里，你应该查看db_info,判断需要分析jlugroup；再根据分组，推导出应为饼状图**
         **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
         **如果我说组织，有一个表是jlugroup，那group有组织的意思，jlugroup就是相关的；如果我说次数，time有次数的意思**
         **画图时组织这个词可以跟jlugroup对应**
         **画图时组织这个词可以跟jlugroup对应**
-        **画图时组织这个词可以跟jlugroup对应**
         
         **总体就是无索引，全部都要**
         **总体就是无索引，全部都要**
-        **总体就是无索引，全部都要**
-        **总体就是无索引，全部都要**
         
-        
+        **以下是专门用于mysql的计算的**
         mysql_caculator(
-            start_index=""，  # 可选，开始日期
-            last_index="",   # 可选，结束日期
-            value_type=""，        # 要分析的字段
-            table_name=""， # 表名
-            chart_type=""   # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
-        )
-        可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb
+            x_field: str,                     # X轴字段名
+            y_field: str,                     # Y轴字段名
+            x_table: str,                     # X轴字段所在的表名
+            y_table: str,                     # Y轴字段所在的表名
+            x_index_field: Optional[str],  # X表的索引/过滤字段
+            x_start_index: Optional[str],  # X表索引字段的起始值
+            x_end_index: Optional[str],    # X表索引字段的结束值
+            y_index_field: Optional[str],  # Y表的索引/过滤字段
+            y_start_index: Optional[str],  # Y表索引字段的起始值
+            y_end_index: Optional[str],    # Y表索引字段的结束值
+            chart_type: str = "bar",          # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
+            limit: int = 5,                   # 排名分析时返回的最大数量，默认为5
+            ascending: bool = False           # 排序方向，True为升序，False为降序
+        ) -> str
+        **可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb**
 
         query_database函数接受一个字符串
         这个字符串非常非常非常重要，是一条mysql指令
