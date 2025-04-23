@@ -299,135 +299,135 @@ class HeatMapCalculator(ChartCalculator):
         return result
 
 
-class YoYMoMCalculator(ChartCalculator):
-    """同比环比计算器"""
-
-    def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
-                  y_table: str) -> Dict[str, Any]:
-        """计算同比环比数据"""
-        if not data:
-            return {
-                "chart_type": "yoy_mom",
-                "current_period": {},
-                "previous_period": {},
-                "previous_year": {},
-                "mom_change": {},
-                "yoy_change": {}
-            }
-
-        result = {}
-
-        # 解析日期并提取年月信息
-        date_data = {}
-        for item in data:
-            if x_field in item and y_field in item:
-                date_str = item[x_field]
-                try:
-                    # 处理不同的日期格式
-                    if 'T' in date_str:  # ISO格式 (2023-04-16T12:30:45)
-                        date_str = date_str.split('T')[0]
-
-                    # 假设日期格式为 YYYY-MM-DD
-                    parts = date_str.split('-')
-                    if len(parts) >= 2:
-                        year_month = f"{parts[0]}-{parts[1]}"
-                        year = parts[0]
-                        month = parts[1]
-
-                        # 对每个年月进行数据聚合
-                        if year_month not in date_data:
-                            date_data[year_month] = {
-                                "year": year,
-                                "month": month,
-                                "count": 0,
-                                "sum": 0,
-                                "values": []
-                            }
-
-                        # 根据值类型进行聚合
-                        if isinstance(item[y_field], (int, float)):
-                            date_data[year_month]["sum"] += item[y_field]
-                            date_data[year_month]["values"].append(item[y_field])
-                        else:
-                            date_data[year_month]["count"] += 1
-                except Exception:
-                    continue
-
-        # 按年月排序
-        sorted_year_months = sorted(date_data.keys())
-
-        if not sorted_year_months:
-            return {
-                "chart_type": "yoy_mom",
-                "error": "无有效数据点"
-            }
-
-        # 计算当前期间、上期和去年同期
-        current_period = sorted_year_months[-1]
-        current_data = date_data[current_period]
-
-        # 环比(MoM): 与上个月比较
-        mom_period = None
-        mom_data = {}
-        mom_change = {}
-        if len(sorted_year_months) > 1:
-            mom_period = sorted_year_months[-2]
-            mom_data = date_data[mom_period]
-
-            # 计算环比变化
-            current_value = current_data["sum"] if current_data["sum"] > 0 else current_data["count"]
-            mom_value = mom_data["sum"] if mom_data["sum"] > 0 else mom_data["count"]
-
-            if mom_value != 0:
-                mom_change = {
-                    "absolute": current_value - mom_value,
-                    "percentage": round(((current_value - mom_value) / mom_value) * 100, 2)
-                }
-            else:
-                mom_change = {"absolute": current_value, "percentage": 100}
-
-        # 同比(YoY): 与去年同月比较
-        current_year, current_month = current_data["year"], current_data["month"]
-        previous_year = str(int(current_year) - 1)
-        yoy_period = f"{previous_year}-{current_month}"
-        yoy_data = {}
-        yoy_change = {}
-
-        if yoy_period in date_data:
-            yoy_data = date_data[yoy_period]
-
-            # 计算同比变化
-            current_value = current_data["sum"] if current_data["sum"] > 0 else current_data["count"]
-            yoy_value = yoy_data["sum"] if yoy_data["sum"] > 0 else yoy_data["count"]
-
-            if yoy_value != 0:
-                yoy_change = {
-                    "absolute": current_value - yoy_value,
-                    "percentage": round(((current_value - yoy_value) / yoy_value) * 100, 2)
-                }
-            else:
-                yoy_change = {"absolute": current_value, "percentage": 100}
-
-        result = {
-            "chart_type": "yoy_mom",
-            "current_period": {
-                "period": current_period,
-                "value": current_data["sum"] if current_data["sum"] > 0 else current_data["count"],
-                "avg": np.mean(current_data["values"]) if current_data["values"] else current_data["count"]
-            },
-            "previous_period": {
-                "period": mom_period,
-                "value": mom_data.get("sum", 0) if mom_data.get("sum", 0) > 0 else mom_data.get("count", 0)
-            },
-            "previous_year": {
-                "period": yoy_period,
-                "value": yoy_data.get("sum", 0) if yoy_data.get("sum", 0) > 0 else yoy_data.get("count", 0)
-            },
-            "mom_change": mom_change,
-            "yoy_change": yoy_change
-        }
-
-        return result
+# class YoYMoMCalculator(ChartCalculator):
+#     """同比环比计算器"""
+#
+#     def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
+#                   y_table: str) -> Dict[str, Any]:
+#         """计算同比环比数据"""
+#         if not data:
+#             return {
+#                 "chart_type": "yoy_mom",
+#                 "current_period": {},
+#                 "previous_period": {},
+#                 "previous_year": {},
+#                 "mom_change": {},
+#                 "yoy_change": {}
+#             }
+#
+#         result = {}
+#
+#         # 解析日期并提取年月信息
+#         date_data = {}
+#         for item in data:
+#             if x_field in item and y_field in item:
+#                 date_str = item[x_field]
+#                 try:
+#                     # 处理不同的日期格式
+#                     if 'T' in date_str:  # ISO格式 (2023-04-16T12:30:45)
+#                         date_str = date_str.split('T')[0]
+#
+#                     # 假设日期格式为 YYYY-MM-DD
+#                     parts = date_str.split('-')
+#                     if len(parts) >= 2:
+#                         year_month = f"{parts[0]}-{parts[1]}"
+#                         year = parts[0]
+#                         month = parts[1]
+#
+#                         # 对每个年月进行数据聚合
+#                         if year_month not in date_data:
+#                             date_data[year_month] = {
+#                                 "year": year,
+#                                 "month": month,
+#                                 "count": 0,
+#                                 "sum": 0,
+#                                 "values": []
+#                             }
+#
+#                         # 根据值类型进行聚合
+#                         if isinstance(item[y_field], (int, float)):
+#                             date_data[year_month]["sum"] += item[y_field]
+#                             date_data[year_month]["values"].append(item[y_field])
+#                         else:
+#                             date_data[year_month]["count"] += 1
+#                 except Exception:
+#                     continue
+#
+#         # 按年月排序
+#         sorted_year_months = sorted(date_data.keys())
+#
+#         if not sorted_year_months:
+#             return {
+#                 "chart_type": "yoy_mom",
+#                 "error": "无有效数据点"
+#             }
+#
+#         # 计算当前期间、上期和去年同期
+#         current_period = sorted_year_months[-1]
+#         current_data = date_data[current_period]
+#
+#         # 环比(MoM): 与上个月比较
+#         mom_period = None
+#         mom_data = {}
+#         mom_change = {}
+#         if len(sorted_year_months) > 1:
+#             mom_period = sorted_year_months[-2]
+#             mom_data = date_data[mom_period]
+#
+#             # 计算环比变化
+#             current_value = current_data["sum"] if current_data["sum"] > 0 else current_data["count"]
+#             mom_value = mom_data["sum"] if mom_data["sum"] > 0 else mom_data["count"]
+#
+#             if mom_value != 0:
+#                 mom_change = {
+#                     "absolute": current_value - mom_value,
+#                     "percentage": round(((current_value - mom_value) / mom_value) * 100, 2)
+#                 }
+#             else:
+#                 mom_change = {"absolute": current_value, "percentage": 100}
+#
+#         # 同比(YoY): 与去年同月比较
+#         current_year, current_month = current_data["year"], current_data["month"]
+#         previous_year = str(int(current_year) - 1)
+#         yoy_period = f"{previous_year}-{current_month}"
+#         yoy_data = {}
+#         yoy_change = {}
+#
+#         if yoy_period in date_data:
+#             yoy_data = date_data[yoy_period]
+#
+#             # 计算同比变化
+#             current_value = current_data["sum"] if current_data["sum"] > 0 else current_data["count"]
+#             yoy_value = yoy_data["sum"] if yoy_data["sum"] > 0 else yoy_data["count"]
+#
+#             if yoy_value != 0:
+#                 yoy_change = {
+#                     "absolute": current_value - yoy_value,
+#                     "percentage": round(((current_value - yoy_value) / yoy_value) * 100, 2)
+#                 }
+#             else:
+#                 yoy_change = {"absolute": current_value, "percentage": 100}
+#
+#         result = {
+#             "chart_type": "yoy_mom",
+#             "current_period": {
+#                 "period": current_period,
+#                 "value": current_data["sum"] if current_data["sum"] > 0 else current_data["count"],
+#                 "avg": np.mean(current_data["values"]) if current_data["values"] else current_data["count"]
+#             },
+#             "previous_period": {
+#                 "period": mom_period,
+#                 "value": mom_data.get("sum", 0) if mom_data.get("sum", 0) > 0 else mom_data.get("count", 0)
+#             },
+#             "previous_year": {
+#                 "period": yoy_period,
+#                 "value": yoy_data.get("sum", 0) if yoy_data.get("sum", 0) > 0 else yoy_data.get("count", 0)
+#             },
+#             "mom_change": mom_change,
+#             "yoy_change": yoy_change
+#         }
+#
+#         return result
 
 
 class RankingCalculator(ChartCalculator):
@@ -490,7 +490,7 @@ class ChartCalculatorFactory:
             "pie": PieChartCalculator,
             "scatter": ScatterChartCalculator,
             "heatmap": HeatMapCalculator,
-            "yoy_mom": YoYMoMCalculator,
+            # "yoy_mom": YoYMoMCalculator,
             # "multi_field": MultiFieldAnalysisCalculator,
             "ranking": RankingCalculator
         }
