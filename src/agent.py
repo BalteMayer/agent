@@ -16,9 +16,11 @@ from pathlib import Path
 import re
 
 
-# TODO: 查询函数优化,
-#  计算函数优化, function calling, f(A,B)
-#  提示词
+# TODO:
+#  f(A,B)及多变量
+#  提示词和SSE
+#  mcp
+#  多数据库
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
