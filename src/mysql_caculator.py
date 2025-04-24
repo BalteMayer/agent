@@ -27,80 +27,395 @@ class ChartCalculator(ABC):
 
 class BarChartCalculator(ChartCalculator):
     def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
-                  y_table: str) -> Dict[str, Any]:
-        """计算条形图所需的数据"""
+                  y_table: str, series_field: str = None) -> Dict[str, Any]:
+        """
+        计算条形图所需的数据，支持多系列
+
+        参数:
+        - data: 原始数据列表
+        - x_field: X轴分类字段
+        - y_field: Y轴数值字段
+        - x_table: X表名
+        - y_table: Y表名
+        - series_field: 可选的系列分组字段，用于多系列柱状图
+
+        返回:
+        - 条形图数据，可能包含多个系列
+        """
         result = {}
-        categories = []
-        values = []
 
-        # 根据x_field进行分组计算
         if not data:
-            return {"categories": [], "values": [], "statistics": {"mean": 0, "median": 0, "max": 0, "min": 0}}
+            return {
+                "chart_type": "bar",
+                "xAxisData": [],
+                "barData": [],
+                "series": [],
+                "statistics": {"mean": 0, "median": 0, "max": 0, "min": 0}
+            }
 
-        value_counts = {}
-        for item in data:
-            if x_field in item:
-                category = item[x_field]
-                if category not in value_counts:
-                    value_counts[category] = 0
-                value_counts[category] += 1
+        # 获取所有X轴分类值
+        categories = list(set(item.get(x_field) for item in data if x_field in item and item.get(x_field) is not None))
+        categories.sort()
 
-        for category, count in value_counts.items():
-            categories.append(category)
-            values.append(count)
+        # 检查是否使用多系列模式
+        if series_field and any(series_field in item for item in data):
+            # 多系列模式: 按series_field分组
+            series_values = list(set(item.get(series_field) for item in data
+                                     if series_field in item and item.get(series_field) is not None))
+            series_values.sort()
 
-        result = {
-            "chart_type": "bar",
-            "xAxisData": categories,
-            "barData": values,
-            "seriesNames": [x_field],
-            "title": f"{x_table}.{x_field} - {y_table}.{y_field} analysis",
-        }
+            # 初始化多系列数据
+            series_data = []
+            for series_value in series_values:
+                series_data.append({
+                    "name": series_value,
+                    "data": [0] * len(categories)
+                })
+
+            # 计算每个系列每个分类的值
+            for item in data:
+                if x_field in item and series_field in item:
+                    if item[x_field] in categories and item[series_field] in series_values:
+                        cat_index = categories.index(item[x_field])
+                        series_index = series_values.index(item[series_field])
+
+                        # 累加或更新值
+                        if y_field in item:
+                            if isinstance(item[y_field], (int, float)):
+                                series_data[series_index]["data"][cat_index] += item[y_field]
+                            else:
+                                # 如果不是数值，计数加1
+                                series_data[series_index]["data"][cat_index] += 1
+
+            # 计算统计信息
+            statistics = {}
+            for series in series_data:
+                values = series["data"]
+                if values:
+                    statistics[series["name"]] = {
+                        "mean": np.mean(values),
+                        "max": max(values),
+                        "min": min(values),
+                        "sum": sum(values)
+                    }
+
+            result = {
+                "chart_type": "bar",
+                "xAxisData": categories,
+                "series": series_data,
+                "seriesNames": series_values,
+                "statistics": statistics,
+                "title": f"{x_table}.{x_field} 按 {series_field} 分组"
+            }
+        else:
+            # 单系列模式: 使用_series_index或_series_field标记处理多个Y字段
+            if any('_series_index' in item for item in data) or any('_series_field' in item for item in data):
+                # 识别来自不同Y字段的数据并按系列分组
+                series_indices = set()
+                series_fields = set()
+
+                for item in data:
+                    if '_series_index' in item:
+                        series_indices.add(item['_series_index'])
+                    if '_series_field' in item:
+                        series_fields.add(item['_series_field'])
+
+                # 优先使用_series_field作为系列名称
+                if series_fields:
+                    # 按_series_field标识系列
+                    series_values = sorted(list(series_fields))
+
+                    # 初始化系列数据
+                    series_data = []
+                    for series_value in series_values:
+                        series_data.append({
+                            "name": series_value,
+                            "data": [0] * len(categories)
+                        })
+
+                    # 处理数据
+                    for item in data:
+                        if x_field in item and '_series_field' in item and item['_series_field'] in series_values:
+                            if item[x_field] in categories:
+                                cat_index = categories.index(item[x_field])
+                                series_index = series_values.index(item['_series_field'])
+
+                                # 对应的Y字段应该是item中的_series_field值
+                                y_field_name = item['_series_field']
+
+                                if y_field_name in item and isinstance(item[y_field_name], (int, float)):
+                                    series_data[series_index]["data"][cat_index] += item[y_field_name]
+                                else:
+                                    # 如果找不到对应的值字段或非数值，则计数+1
+                                    series_data[series_index]["data"][cat_index] += 1
+                else:
+                    # 按_series_index标识系列
+                    series_values = sorted(list(series_indices))
+
+                    # 初始化系列数据
+                    series_data = []
+                    for idx in series_values:
+                        series_data.append({
+                            "name": f"系列 {idx + 1}",
+                            "data": [0] * len(categories)
+                        })
+
+                    # 处理数据
+                    for item in data:
+                        if x_field in item and '_series_index' in item and item['_series_index'] in series_values:
+                            if item[x_field] in categories:
+                                cat_index = categories.index(item[x_field])
+                                series_index = series_values.index(item['_series_index'])
+
+                                if y_field in item:
+                                    if isinstance(item[y_field], (int, float)):
+                                        series_data[series_index]["data"][cat_index] += item[y_field]
+                                    else:
+                                        # 如果不是数值，计数加1
+                                        series_data[series_index]["data"][cat_index] += 1
+
+                # 计算统计信息
+                statistics = {}
+                for series in series_data:
+                    values = series["data"]
+                    if values:
+                        statistics[series["name"]] = {
+                            "mean": np.mean(values),
+                            "max": max(values),
+                            "min": min(values),
+                            "sum": sum(values)
+                        }
+
+                result = {
+                    "chart_type": "bar",
+                    "xAxisData": categories,
+                    "series": series_data,
+                    "seriesNames": [s["name"] for s in series_data],
+                    "statistics": statistics,
+                    "title": f"{x_table}.{x_field} 多系列分析"
+                }
+            else:
+                # 常规单系列处理
+                values = []
+
+                # 根据x_field进行分组计算
+                value_counts = {}
+                for item in data:
+                    if x_field in item:
+                        category = item[x_field]
+                        if category not in value_counts:
+                            value_counts[category] = 0
+
+                        if y_field in item and isinstance(item[y_field], (int, float)):
+                            value_counts[category] += item[y_field]
+                        else:
+                            value_counts[category] += 1
+
+                for category in categories:
+                    values.append(value_counts.get(category, 0))
+
+                # 计算统计数据
+                statistics = {
+                    "mean": np.mean(values) if values else 0,
+                    "median": np.median(values) if values else 0,
+                    "max": max(values) if values else 0,
+                    "min": min(values) if values else 0
+                }
+
+                result = {
+                    "chart_type": "bar",
+                    "xAxisData": categories,
+                    "barData": values,
+                    "series": [{
+                        "name": y_field,
+                        "data": values
+                    }],
+                    "seriesNames": [y_field],
+                    "statistics": statistics,
+                    "title": f"{x_table}.{x_field} - {y_table}.{y_field} 分析"
+                }
 
         return result
 
 
 class LineChartCalculator(ChartCalculator):
     def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
-                  y_table: str) -> Dict[str, Any]:
-        """计算折线图所需的数据"""
-        result = {}
-        time_series = []
-        values = []
+                  y_table: str, series_field: str = None) -> Dict[str, Any]:
+        """
+        计算折线图所需的数据，支持多系列
 
+        参数:
+        - data: 原始数据列表
+        - x_field: X轴字段（通常是时间或序列字段）
+        - y_field: Y轴数值字段
+        - x_table: X表名
+        - y_table: Y表名
+        - series_field: 可选的系列分组字段，用于多系列折线图
+
+        返回:
+        - 折线图数据，可能包含多个系列
+        """
         if not data:
             return {
                 "chart_type": "line",
                 "data": [],
                 "xAxisLabels": [],
+                "series": [],
                 "title": f"{x_field}-{y_field}"
             }
 
-        # 按日期排序数据
-        sorted_data = sorted(data, key=lambda x: x.get(x_field, ''))
+        # 获取所有X轴的值并排序
+        # 在计算日期值时添加NULL值检查
+        x_values = list(set(str(item.get(x_field, '')) for item in data if x_field in item and item.get(x_field) is not None))
+        x_values.sort()
 
-        # 根据y_field进行时间序列统计
-        date_counts = {}
-        for item in sorted_data:
-            if x_field in item and y_field in item:
-                date = item.get(x_field, '')
-                if date not in date_counts:
-                    date_counts[date] = 0
-                if isinstance(item[y_field], (int, float)):  # 如果值是数字
-                    date_counts[date] += item[y_field]
-                else:  # 否则计数
-                    date_counts[date] += 1
+        # 检查是否使用多系列模式
+        if series_field and any(series_field in item for item in data):
+            # 多系列模式: 按series_field分组
+            series_values = list(set(item.get(series_field) for item in data if series_field in item and item.get(series_field) is not None))
+            series_values.sort()
 
-        for date, count in sorted(date_counts.items()):
-            time_series.append(date)
-            values.append(count)
+            # 初始化系列数据
+            series_data = []
+            for series_value in series_values:
+                series_data.append({
+                    "name": series_value,
+                    "data": [0] * len(x_values)
+                })
 
-        result = {
-            "chart_type": "line",
-            "data": values,
-            "xAxisLabels": time_series,
-            "title": f"{x_table}.{x_field} - {y_table}.{y_field}",
-        }
+            # 为每个系列每个X值计算Y值
+            for i, series_value in enumerate(series_values):
+                for j, x_value in enumerate(x_values):
+                    # 过滤出属于当前系列和X值的数据
+                    matching_items = [
+                        item for item in data
+                        if series_field in item and item[series_field] == series_value
+                           and x_field in item and str(item[x_field]) == x_value
+                    ]
+
+                    # 如果有匹配的数据，计算值
+                    if matching_items:
+                        valid_items = [item for item in matching_items if y_field in item]
+                        if valid_items:
+                            if all(isinstance(item[y_field], (int, float)) for item in valid_items):
+                                # 如果都是数值，计算总和
+                                series_data[i]["data"][j] = sum(item[y_field] for item in valid_items)
+                            else:
+                                # 否则计数
+                                series_data[i]["data"][j] = len(valid_items)
+
+            result = {
+                "chart_type": "line",
+                "xAxisLabels": x_values,
+                "series": series_data,
+                "title": f"{x_table}.{x_field} 按 {series_field} 分组"
+            }
+        else:
+            # 检查是否有_series_index或_series_field标记的多系列数据
+            if any('_series_index' in item for item in data) or any('_series_field' in item for item in data):
+                # 识别来自不同Y字段的数据并按系列分组
+                series_indices = set()
+                series_fields = set()
+
+                for item in data:
+                    if '_series_index' in item:
+                        series_indices.add(item['_series_index'])
+                    if '_series_field' in item:
+                        series_fields.add(item['_series_field'])
+
+                # 优先使用_series_field作为系列名称
+                if series_fields:
+                    # 按_series_field标识系列
+                    series_values = sorted(list(series_fields))
+
+                    # 初始化系列数据
+                    series_data = []
+                    for series_value in series_values:
+                        series_data.append({
+                            "name": series_value,
+                            "data": [0] * len(x_values)
+                        })
+
+                    # 处理数据
+                    for item in data:
+                        if x_field in item and '_series_field' in item and item['_series_field'] in series_values:
+                            x_val = str(item[x_field])
+                            if x_val in x_values:
+                                x_index = x_values.index(x_val)
+                                series_index = series_values.index(item['_series_field'])
+
+                                # 对应的Y字段应该是item中的_series_field值
+                                y_field_name = item['_series_field']
+
+                                if y_field_name in item and isinstance(item[y_field_name], (int, float)):
+                                    series_data[series_index]["data"][x_index] += item[y_field_name]
+                                else:
+                                    # 如果找不到对应的值字段或非数值，则计数+1
+                                    series_data[series_index]["data"][x_index] += 1
+                else:
+                    # 按_series_index标识系列
+                    series_values = sorted(list(series_indices))
+
+                    # 初始化系列数据
+                    series_data = []
+                    for idx in series_values:
+                        series_data.append({
+                            "name": f"系列 {idx + 1}",
+                            "data": [0] * len(x_values)
+                        })
+
+                    # 处理数据
+                    for item in data:
+                        if x_field in item and '_series_index' in item and item['_series_index'] in series_values:
+                            x_val = str(item[x_field])
+                            if x_val in x_values:
+                                x_index = x_values.index(x_val)
+                                series_index = series_values.index(item['_series_index'])
+
+                                if y_field in item:
+                                    if isinstance(item[y_field], (int, float)):
+                                        series_data[series_index]["data"][x_index] += item[y_field]
+                                    else:
+                                        # 如果不是数值，计数加1
+                                        series_data[series_index]["data"][x_index] += 1
+
+                result = {
+                    "chart_type": "line",
+                    "xAxisLabels": x_values,
+                    "series": series_data,
+                    "title": f"{x_table}.{x_field} 多系列趋势"
+                }
+            else:
+                # 常规单系列处理
+                # 按日期排序数据
+                sorted_data = sorted(data, key=lambda x: x.get(x_field, ''))
+
+                # 根据y_field进行时间序列统计
+                date_counts = {}
+                for item in sorted_data:
+                    if x_field in item and y_field in item:
+                        date = str(item.get(x_field, ''))
+                        if date not in date_counts:
+                            date_counts[date] = 0
+                        if isinstance(item[y_field], (int, float)):  # 如果值是数字
+                            date_counts[date] += item[y_field]
+                        else:  # 否则计数
+                            date_counts[date] += 1
+
+                # 确保按排序后的x_values顺序获取数据
+                time_series = x_values
+                values = [date_counts.get(date, 0) for date in time_series]
+
+                result = {
+                    "chart_type": "line",
+                    "data": values,
+                    "xAxisLabels": time_series,
+                    "series": [{
+                        "name": y_field,
+                        "data": values
+                    }],
+                    "title": f"{x_table}.{x_field} - {y_table}.{y_field}",
+                }
 
         return result
 
@@ -169,17 +484,29 @@ class PieChartCalculator(ChartCalculator):
 
 class ScatterChartCalculator(ChartCalculator):
     def calculate(self, data: List[Dict[str, Any]], x_field: str, y_field: str, x_table: str,
-                  y_table: str) -> Dict[str, Any]:
-        """计算散点图所需的数据"""
+                  y_table: str, series_field: str = None) -> Dict[str, Any]:
+        """
+        计算散点图所需的数据，支持多系列
+
+        参数:
+        - data: 原始数据列表
+        - x_field: X轴字段
+        - y_field: Y轴字段
+        - x_table: X表名
+        - y_table: Y表名
+        - series_field: 可选的系列分组字段，用于多系列散点图
+
+        返回:
+        - 散点图数据，可能包含多个系列
+        """
         result = {}
-        x_values = []
-        y_values = []
 
         if not data:
             return {
                 "chart_type": "scatter",
                 "x": [],
                 "y": [],
+                "series": [],
                 "x_field": x_field,
                 "y_field": y_field,
                 "correlation": 0,
@@ -190,18 +517,242 @@ class ScatterChartCalculator(ChartCalculator):
                 }
             }
 
-        # 提取数据点
-        for item in data:
-            if y_field in item and x_field in item:
-                try:
-                    x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else item[x_field]
-                    y_val = float(item[y_field]) if not isinstance(item[y_field], (int, float)) else item[y_field]
-                    x_values.append(x_val)
-                    y_values.append(y_val)
-                except (ValueError, TypeError):
-                    continue
+        # 检查是否使用多系列模式
+        if series_field and any(series_field in item for item in data):
+            # 多系列模式: 按series_field分组
+            series_values = list(set(item.get(series_field) for item in data
+                                     if series_field in item and item.get(series_field) is not None))
+            series_values.sort()
 
-        # 计算相关系数
+            series_data = []
+            correlations = {}
+            regressions = {}
+
+            for series_value in series_values:
+                # 过滤出当前系列的数据
+                series_items = [item for item in data if series_field in item and item[series_field] == series_value]
+
+                x_values = []
+                y_values = []
+
+                # 提取数据点
+                for item in series_items:
+                    if y_field in item and x_field in item:
+                        try:
+                            x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else item[
+                                x_field]
+                            y_val = float(item[y_field]) if not isinstance(item[y_field], (int, float)) else item[
+                                y_field]
+                            x_values.append(x_val)
+                            y_values.append(y_val)
+                        except (ValueError, TypeError):
+                            continue
+
+                # 计算相关系数和回归线
+                correlation = 0
+                slope = 0
+                intercept = 0
+                regression_line = []
+
+                if len(x_values) > 1:
+                    correlation = np.corrcoef(x_values, y_values)[0, 1] if len(set(x_values)) > 1 and len(
+                        set(y_values)) > 1 else 0
+
+                    # 线性回归
+                    z = np.polyfit(x_values, y_values, 1) if len(set(x_values)) > 1 else [0, 0]
+                    slope = z[0]
+                    intercept = z[1]
+
+                    # 回归线上的点
+                    regression_line = [slope * x + intercept for x in x_values]
+
+                # 保存系列数据
+                series_data.append({
+                    "name": series_value,
+                    "x": x_values,
+                    "y": y_values,
+                    "data": list(zip(x_values, y_values))
+                })
+
+                # 保存系列统计数据
+                correlations[series_value] = float(correlation) if not np.isnan(correlation) else 0
+                regressions[series_value] = {
+                    "slope": float(slope),
+                    "intercept": float(intercept),
+                    "line": regression_line
+                }
+
+            result = {
+                "chart_type": "scatter",
+                "series": series_data,
+                "x_field": x_field,
+                "y_field": y_field,
+                "correlations": correlations,
+                "regressions": regressions,
+                "series_field": series_field
+            }
+        else:
+            # 检查是否有_series_index或_series_field标记的多系列数据
+            if any('_series_index' in item for item in data) or any('_series_field' in item for item in data):
+                # 识别来自不同Y字段的数据并按系列分组
+                series_indices = set()
+                series_fields = set()
+
+                for item in data:
+                    if '_series_index' in item:
+                        series_indices.add(item['_series_index'])
+                    if '_series_field' in item:
+                        series_fields.add(item['_series_field'])
+
+                series_data = []
+                correlations = {}
+                regressions = {}
+
+                # 优先使用_series_field作为系列名称
+                if series_fields:
+                    # 按_series_field标识系列
+                    series_values = sorted(list(series_fields))
+
+                    for series_value in series_values:
+                        # 过滤出当前系列的数据
+                        series_items = [item for item in data if
+                                        '_series_field' in item and item['_series_field'] == series_value]
+
+                        x_values = []
+                        y_values = []
+
+                        # 提取数据点
+                        for item in series_items:
+                            if x_field in item:
+                                try:
+                                    x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else \
+                                    item[x_field]
+
+                                    # 使用该系列对应的y字段名
+                                    y_field_name = item['_series_field']
+                                    if y_field_name in item:
+                                        y_val = float(item[y_field_name]) if not isinstance(item[y_field_name],
+                                                                                            (int, float)) else item[
+                                            y_field_name]
+                                        x_values.append(x_val)
+                                        y_values.append(y_val)
+                                except (ValueError, TypeError):
+                                    continue
+
+                        # 计算统计数据和保存系列
+                        self._process_scatter_series(
+                            series_data, correlations, regressions,
+                            series_value, x_values, y_values
+                        )
+                else:
+                    # 按_series_index标识系列
+                    series_values = sorted(list(series_indices))
+
+                    for series_idx in series_values:
+                        # 过滤出当前系列的数据
+                        series_items = [item for item in data if
+                                        '_series_index' in item and item['_series_index'] == series_idx]
+
+                        x_values = []
+                        y_values = []
+
+                        # 提取数据点
+                        for item in series_items:
+                            if x_field in item and y_field in item:
+                                try:
+                                    x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else \
+                                    item[x_field]
+                                    y_val = float(item[y_field]) if not isinstance(item[y_field], (int, float)) else \
+                                    item[y_field]
+                                    x_values.append(x_val)
+                                    y_values.append(y_val)
+                                except (ValueError, TypeError):
+                                    continue
+
+                        # 使用系列索引作为名称
+                        series_name = f"系列 {series_idx + 1}"
+
+                        # 计算统计数据和保存系列
+                        self._process_scatter_series(
+                            series_data, correlations, regressions,
+                            series_name, x_values, y_values
+                        )
+
+                result = {
+                    "chart_type": "scatter",
+                    "series": series_data,
+                    "x_field": x_field,
+                    "y_field": y_field,
+                    "correlations": correlations,
+                    "regressions": regressions
+                }
+            else:
+                # 常规单系列处理
+                x_values = []
+                y_values = []
+
+                # 提取数据点
+                for item in data:
+                    if y_field in item and x_field in item:
+                        try:
+                            x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else item[
+                                x_field]
+                            y_val = float(item[y_field]) if not isinstance(item[y_field], (int, float)) else item[
+                                y_field]
+                            x_values.append(x_val)
+                            y_values.append(y_val)
+                        except (ValueError, TypeError):
+                            continue
+
+                # 计算相关系数
+                if len(x_values) > 1:
+                    correlation = np.corrcoef(x_values, y_values)[0, 1] if len(set(x_values)) > 1 and len(
+                        set(y_values)) > 1 else 0
+
+                    # 线性回归
+                    z = np.polyfit(x_values, y_values, 1) if len(set(x_values)) > 1 else [0, 0]
+                    slope = z[0]
+                    intercept = z[1]
+
+                    # 回归线上的点
+                    regression_line = [slope * x + intercept for x in x_values]
+                else:
+                    correlation = 0
+                    slope = 0
+                    intercept = 0
+                    regression_line = []
+
+                result = {
+                    "chart_type": "scatter",
+                    "x": x_values,
+                    "y": y_values,
+                    "series": [{
+                        "name": y_field,
+                        "x": x_values,
+                        "y": y_values,
+                        "data": list(zip(x_values, y_values))
+                    }],
+                    "x_field": x_field,
+                    "y_field": y_field,
+                    "correlation": float(correlation) if not np.isnan(correlation) else 0,
+                    "regression": {
+                        "slope": float(slope),
+                        "intercept": float(intercept),
+                        "line": regression_line
+                    }
+                }
+
+        return result
+
+    def _process_scatter_series(self, series_data, correlations, regressions,
+                                series_name, x_values, y_values):
+        """辅助方法：计算散点图系列的统计数据并添加到结果中"""
+        # 计算相关系数和回归线
+        correlation = 0
+        slope = 0
+        intercept = 0
+        regression_line = []
+
         if len(x_values) > 1:
             correlation = np.corrcoef(x_values, y_values)[0, 1] if len(set(x_values)) > 1 and len(
                 set(y_values)) > 1 else 0
@@ -213,27 +764,22 @@ class ScatterChartCalculator(ChartCalculator):
 
             # 回归线上的点
             regression_line = [slope * x + intercept for x in x_values]
-        else:
-            correlation = 0
-            slope = 0
-            intercept = 0
-            regression_line = []
 
-        result = {
-            "chart_type": "scatter",
+        # 保存系列数据
+        series_data.append({
+            "name": series_name,
             "x": x_values,
             "y": y_values,
-            "x_field": x_field,
-            "y_field": y_field,
-            "correlation": float(correlation) if not np.isnan(correlation) else 0,
-            "regression": {
-                "slope": float(slope),
-                "intercept": float(intercept),
-                "line": regression_line
-            }
-        }
+            "data": list(zip(x_values, y_values))
+        })
 
-        return result
+        # 保存系列统计数据
+        correlations[series_name] = float(correlation) if not np.isnan(correlation) else 0
+        regressions[series_name] = {
+            "slope": float(slope),
+            "intercept": float(intercept),
+            "line": regression_line
+        }
 
 
 class HeatMapCalculator(ChartCalculator):
@@ -780,46 +1326,54 @@ def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
 
 def mysql_caculator(
         x_field: str,
-        y_field: str,
+        y_field: Union[str, List[str]],  # 可以是单个字段名或字段名列表
         x_table: str,
-        y_table: str,
+        y_table: Union[str, List[str]],  # 可以是单个表名或表名列表
         x_index_field: Optional[str] = None,
         x_start_index: Optional[str] = None,
         x_end_index: Optional[str] = None,
-        y_index_field: Optional[str] = None,
-        y_start_index: Optional[str] = None,
-        y_end_index: Optional[str] = None,
+        y_index_field: Union[str, List[str], None] = None,  # 可以是单个索引字段或索引字段列表
+        y_start_index: Union[str, List[str], None] = None,  # 可以是单个起始值或起始值列表
+        y_end_index: Union[str, List[str], None] = None,  # 可以是单个结束值或结束值列表
         chart_type: str = "bar",
         limit: int = 5,
-        ascending: bool = False
+        ascending: bool = False,
+        # 其他参数
+        series_field: Optional[str] = None,
+        z_field: Optional[str] = None,
+        color_field: Optional[str] = None,
+        value_fields: Optional[List[str]] = None,
+        entity_field: Optional[str] = None
 ) -> str:
     """
     根据配置连接MySQL数据库，查询指定范围(可选)数据，并根据图表类型进行计算
+    支持多系列图表(柱状图、折线图、散点图)的不定数量Y系列
 
     参数:
     - x_field: X轴字段名
-    - y_field: Y轴字段名
+    - y_field: Y轴字段名或字段名列表
     - x_table: X轴字段所在的表名
-    - y_table: Y轴字段所在的表名
+    - y_table: Y轴字段所在的表名或表名列表
     - x_index_field: X表的索引/过滤字段
     - x_start_index: X表索引字段的起始值
     - x_end_index: X表索引字段的结束值
-    - y_index_field: Y表的索引/过滤字段
-    - y_start_index: Y表索引字段的起始值
-    - y_end_index: Y表索引字段的结束值
-    - chart_type: 图表类型，默认为柱状图
+    - y_index_field: Y表的索引/过滤字段或字段列表
+    - y_start_index: Y表索引字段的起始值或值列表
+    - y_end_index: Y表索引字段的结束值或值列表
+    - chart_type: 图表类型
     - limit: 排名分析时返回的最大数量，默认为5
     - ascending: 排序方向，True为升序，False为降序
+    - 其他参数
 
     返回:
     - JSON格式的计算结果
     """
 
+    # 记录日志
     logger.info(
         f"开始查询MySQL数据: X表={x_table}, X字段={x_field}, Y表={y_table}, Y字段={y_field}, "
-        f"X索引字段={x_index_field}, X起始={x_start_index}, X结束={x_end_index}, "
-        f"Y索引字段={y_index_field}, Y起始={y_start_index}, Y结束={y_end_index}, "
-        f"图表类型: {chart_type}")
+        f"图表类型: {chart_type}"
+    )
 
     try:
         # 加载数据库配置
@@ -830,7 +1384,6 @@ def mysql_caculator(
         if "mysql" in db_info:
             mysql_info = db_info["mysql"]
         else:
-            # 如果没有mysql子键，使用顶级配置
             mysql_info = db_info
 
         # 连接到MySQL数据库
@@ -838,29 +1391,252 @@ def mysql_caculator(
         connection = connect_to_mysql(mysql_info)
         logger.info(f"成功连接到MySQL数据库: {mysql_info.get('host')}:{mysql_info.get('port')}")
 
-        # 查询数据
-        logger.info(f"查询表 {x_table} 和 {y_table} 的数据...")
-        data = query_data_from_tables(
-            connection,
-            x_table, y_table,
-            x_field, y_field,
-            x_index_field, x_start_index, x_end_index,
-            y_index_field, y_start_index, y_end_index
-        )
-        logger.info(f"查询完成，获取到 {len(data)} 条记录")
+        # 判断是否为需要多y系列的图表类型
+        multi_series_chart_types = ["bar", "line", "scatter", "multi_series_bar", "multi_series_line"]
+        is_multi_series_chart = chart_type.lower() in multi_series_chart_types
 
-        # 根据图表类型执行计算
-        logger.info(f"开始计算 {chart_type} 类型的图表数据...")
-        calculator = ChartCalculatorFactory.create_calculator(chart_type)
+        # 如果是多系列图表且传入了y_field列表
+        if is_multi_series_chart and isinstance(y_field, list) and len(y_field) > 0:
+            # 标准化参数，确保所有y相关参数都是列表
+            y_fields = y_field  # 已经是列表
 
-        if chart_type.lower() == "ranking":
-            # 使用RankingCalculator时传入额外的limit和ascending参数
-            ranking_calculator = RankingCalculator()
-            calculation_result = ranking_calculator.calculate(
-                data, x_field, y_field, x_table, y_table, limit, ascending
-            )
+            # 处理y_table，如果是字符串则转为等长的列表
+            if isinstance(y_table, str):
+                y_tables = [y_table] * len(y_fields)
+            else:
+                # 如果y_table是列表但长度不足，则用最后一个值填充
+                if len(y_table) < len(y_fields):
+                    y_tables = list(y_table) + [y_table[-1]] * (len(y_fields) - len(y_table))
+                else:
+                    y_tables = y_table
+
+            # 处理y_index_field
+            if y_index_field is None:
+                y_index_fields = [None] * len(y_fields)
+            elif isinstance(y_index_field, str):
+                y_index_fields = [y_index_field] * len(y_fields)
+            else:
+                # 如果y_index_field是列表但长度不足，则用None填充
+                if len(y_index_field) < len(y_fields):
+                    y_index_fields = list(y_index_field) + [None] * (len(y_fields) - len(y_index_field))
+                else:
+                    y_index_fields = y_index_field
+
+            # 处理y_start_index
+            if y_start_index is None:
+                y_start_indices = [None] * len(y_fields)
+            elif isinstance(y_start_index, str):
+                y_start_indices = [y_start_index] * len(y_fields)
+            else:
+                # 如果y_start_index是列表但长度不足，则用None填充
+                if len(y_start_index) < len(y_fields):
+                    y_start_indices = list(y_start_index) + [None] * (len(y_fields) - len(y_start_index))
+                else:
+                    y_start_indices = y_start_index
+
+            # 处理y_end_index
+            if y_end_index is None:
+                y_end_indices = [None] * len(y_fields)
+            elif isinstance(y_end_index, str):
+                y_end_indices = [y_end_index] * len(y_fields)
+            else:
+                # 如果y_end_index是列表但长度不足，则用None填充
+                if len(y_end_index) < len(y_fields):
+                    y_end_indices = list(y_end_index) + [None] * (len(y_fields) - len(y_end_index))
+                else:
+                    y_end_indices = y_end_index
+
+            # 查询每个y系列的数据并合并
+            all_data = []
+            for i, y_field_item in enumerate(y_fields):
+                # 查询单个y系列的数据
+                series_data = query_data_from_tables(
+                    connection,
+                    x_table, y_tables[i],
+                    x_field, y_field_item,
+                    x_index_field, x_start_index, x_end_index,
+                    y_index_fields[i], y_start_indices[i], y_end_indices[i]
+                )
+
+                # 为数据添加系列标识
+                for item in series_data:
+                    item['_series_index'] = i
+                    item['_series_field'] = y_field_item
+                    item['_series_table'] = y_tables[i]
+
+                all_data.extend(series_data)
+
+            # 创建计算器
+            calculator = ChartCalculatorFactory.create_calculator(chart_type)
+
+            # 对于需要多系列处理的图表类型
+            if chart_type.lower() in ["multi_series_bar", "multi_series_line"]:
+                # 如果提供了series_field，则按该字段分组
+                if series_field:
+                    calculation_result = calculator.calculate(
+                        all_data, x_field, y_fields[0], x_table, y_tables[0], series_field
+                    )
+                else:
+                    # 否则使用y_field名称作为系列标识
+                    # 转换数据格式为系列格式
+                    series_data = []
+                    for item in all_data:
+                        series_idx = item.get('_series_index', 0)
+                        if 0 <= series_idx < len(y_fields):
+                            y_field_name = y_fields[series_idx]
+                            if x_field in item and y_field_name in item:
+                                series_item = {
+                                    x_field: item[x_field],
+                                    y_fields[0]: item[y_field_name],  # 统一使用第一个y_field作为值字段
+                                    "_series": y_field_name  # 使用y_field名称作为系列标识
+                                }
+                                series_data.append(series_item)
+
+                    calculation_result = calculator.calculate(
+                        series_data, x_field, y_fields[0], x_table, y_tables[0], "_series"
+                    )
+            else:
+                # 对于普通柱状图和折线图，自动转换为多系列形式
+                # 转换为适合多系列展示的数据格式
+                x_values = list(set(item[x_field] for item in all_data if x_field in item))
+                x_values.sort()
+
+                series_data = []
+                for y_idx, y_field_name in enumerate(y_fields):
+                    series_values = [0] * len(x_values)
+
+                    # 过滤出当前系列的数据
+                    current_series_data = [item for item in all_data if item.get('_series_index') == y_idx]
+
+                    # 按x_field值分组
+                    for x_idx, x_val in enumerate(x_values):
+                        matching_items = [item for item in current_series_data
+                                          if x_field in item and item[x_field] == x_val]
+
+                        if matching_items:
+                            # 汇总该x值对应的y值
+                            valid_items = [item for item in matching_items if y_field_name in item]
+                            if valid_items:
+                                if all(isinstance(item[y_field_name], (int, float)) for item in valid_items):
+                                    series_values[x_idx] = sum(item[y_field_name] for item in valid_items)
+                                else:
+                                    series_values[x_idx] = len(valid_items)
+
+                    series_data.append({
+                        "name": y_field_name,
+                        "data": series_values
+                    })
+
+                # 构建适合图表类型的结果
+                if chart_type.lower() == "bar":
+                    calculation_result = {
+                        "chart_type": "bar",
+                        "xAxisData": x_values,
+                        "series": series_data,
+                        "title": f"{x_table}.{x_field} - 多系列分析"
+                    }
+                elif chart_type.lower() == "line":
+                    calculation_result = {
+                        "chart_type": "line",
+                        "xAxisLabels": x_values,
+                        "series": series_data,
+                        "title": f"{x_table}.{x_field} - 多系列趋势"
+                    }
+                elif chart_type.lower() == "scatter":
+                    # 散点图的处理略有不同
+                    scatter_series = []
+                    for y_idx, y_field_name in enumerate(y_fields):
+                        # 过滤出当前系列的数据
+                        current_series_data = [item for item in all_data if item.get('_series_index') == y_idx]
+
+                        x_vals = []
+                        y_vals = []
+
+                        for item in current_series_data:
+                            if x_field in item and y_field_name in item:
+                                try:
+                                    x_val = float(item[x_field]) if not isinstance(item[x_field], (int, float)) else \
+                                    item[x_field]
+                                    y_val = float(item[y_field_name]) if not isinstance(item[y_field_name],
+                                                                                        (int, float)) else item[
+                                        y_field_name]
+                                    x_vals.append(x_val)
+                                    y_vals.append(y_val)
+                                except (ValueError, TypeError):
+                                    continue
+
+                        scatter_series.append({
+                            "name": y_field_name,
+                            "data": list(zip(x_vals, y_vals))
+                        })
+
+                    calculation_result = {
+                        "chart_type": "scatter",
+                        "series": scatter_series,
+                        "x_field": x_field,
+                        "y_fields": y_fields,
+                        "title": f"{x_table}.{x_field} - 多系列散点分析"
+                    }
         else:
-            calculation_result = calculator.calculate(data, x_field, y_field, x_table, y_table)
+            # 对于单y系列的图表或不支持多系列的图表类型，保持原始逻辑
+            # 确保y_field是单个字符串
+            if isinstance(y_field, list):
+                primary_y_field = y_field[0] if y_field else None
+            else:
+                primary_y_field = y_field
+
+            # 确保y_table是单个字符串
+            if isinstance(y_table, list):
+                primary_y_table = y_table[0] if y_table else x_table
+            else:
+                primary_y_table = y_table
+
+            # 确保y索引参数是单个值
+            primary_y_index_field = y_index_field[0] if isinstance(y_index_field,
+                                                                   list) and y_index_field else y_index_field
+            primary_y_start_index = y_start_index[0] if isinstance(y_start_index,
+                                                                   list) and y_start_index else y_start_index
+            primary_y_end_index = y_end_index[0] if isinstance(y_end_index, list) and y_end_index else y_end_index
+
+            # 查询数据
+            data = query_data_from_tables(
+                connection,
+                x_table, primary_y_table,
+                x_field, primary_y_field,
+                x_index_field, x_start_index, x_end_index,
+                primary_y_index_field, primary_y_start_index, primary_y_end_index
+            )
+
+            # 根据图表类型执行计算
+            calculator = ChartCalculatorFactory.create_calculator(chart_type)
+
+            if chart_type.lower() == "3d_scatter":
+                if not z_field:
+                    return json.dumps({"error": "3D散点图需要指定z_field参数"}, ensure_ascii=False)
+
+                if color_field:
+                    calculation_result = calculator.calculate(
+                        data, x_field, primary_y_field, z_field, x_table, primary_y_table, color_field
+                    )
+                else:
+                    calculation_result = calculator.calculate(
+                        data, x_field, primary_y_field, z_field, x_table, primary_y_table
+                    )
+            elif chart_type.lower() == "radar":
+                if not value_fields or len(value_fields) < 3:
+                    return json.dumps({"error": "雷达图需要至少3个value_fields参数"}, ensure_ascii=False)
+
+                calculation_result = calculator.calculate(
+                    data, x_field, value_fields, entity_field
+                )
+            elif chart_type.lower() == "ranking":
+                calculation_result = calculator.calculate(
+                    data, x_field, primary_y_field, x_table, primary_y_table, limit, ascending
+                )
+            else:
+                calculation_result = calculator.calculate(
+                    data, x_field, primary_y_field, x_table, primary_y_table
+                )
 
         # 关闭连接
         connection.close()
@@ -870,8 +1646,9 @@ def mysql_caculator(
         result = {
             "chart_type": chart_type,
             "x_table": x_table,
-            "y_table": y_table,
             "x_field": x_field,
+            # 对于多系列图表返回多个y字段信息
+            "y_table": y_table,
             "y_field": y_field,
             "filters": {
                 "x_filter": {
@@ -885,10 +1662,24 @@ def mysql_caculator(
                     "end": y_end_index
                 }
             },
-            "data_count": len(data),
+            "data_count": len(all_data) if 'all_data' in locals() else (len(data) if 'data' in locals() else 0),
             "result": calculation_result
         }
-        logger.info(f"计算完成，返回结果")
+
+        # 如果是多系列图表，添加系列信息
+        if is_multi_series_chart and isinstance(y_field, list) and len(y_field) > 0:
+            result["series_count"] = len(y_field)
+            result["series_info"] = [
+                {
+                    "field": y_fields[i],
+                    "table": y_tables[i],
+                    "index_field": y_index_fields[i] if i < len(y_index_fields) else None,
+                    "start_index": y_start_indices[i] if i < len(y_start_indices) else None,
+                    "end_index": y_end_indices[i] if i < len(y_end_indices) else None
+                }
+                for i in range(len(y_fields))
+            ]
+
         return f"[{chart_type}{json.dumps(result, ensure_ascii=False)}]"
 
     except Exception as e:
@@ -901,41 +1692,87 @@ def mysql_caculator(
             "error": str(e),
             "chart_type": chart_type,
             "x_table": x_table,
-            "y_table": y_table,
             "x_field": x_field,
-            "y_field": y_field,
-            "filters": {
-                "x_filter": {
-                    "field": x_index_field,
-                    "start": x_start_index,
-                    "end": x_end_index
-                },
-                "y_filter": {
-                    "field": y_index_field,
-                    "start": y_start_index,
-                    "end": y_end_index
-                }
-            }
+            "y_table": y_table,
+            "y_field": y_field
         }
 
         return json.dumps(error_result, ensure_ascii=False)
 
 
 if __name__ == "__main__":
-
+    print("======= 测试1: 单系列柱状图 =======")
     # 柱状图示例 - 分析不同组别的人数
     result = mysql_caculator(
         x_field="jlugroup",  # X轴字段名 - 组别
-        y_field = "ID",  # Y轴字段名 - 使用ID进行计数
-        x_table = "Data",  # X轴字段所在的表名
-        y_table = "Data",  # Y轴字段所在的表名
-        x_index_field = "school",  # X表的索引/过滤字段 - 根据校区筛选
-        x_start_index = "南湖校区",  # X表索引字段的起始值
-        x_end_index = "南湖校区",  # X表索引字段的结束值
-        y_index_field = "identity",  # Y表的索引/过滤字段 - 根据身份筛选
-        y_start_index = "正式队员",  # Y表索引字段的起始值
-        y_end_index = "正式队员",  # Y表索引字段的结束值
-        chart_type = "bar"  # 图表类型 - 生成柱状图
+        y_field="ID",  # Y轴字段名 - 使用ID进行计数
+        x_table="Data",  # X轴字段所在的表名
+        y_table="Data",  # Y轴字段所在的表名
+        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+        x_start_index="南湖校区",  # X表索引字段的起始值
+        x_end_index="南湖校区",  # X表索引字段的结束值
+        y_index_field="identity",  # Y表的索引/过滤字段 - 根据身份筛选
+        y_start_index="正式队员",  # Y表索引字段的起始值
+        y_end_index="正式队员",  # Y表索引字段的结束值
+        chart_type="bar"  # 图表类型 - 生成柱状图
     )
-
     print(result)
+
+    print("\n======= 测试2: 多系列柱状图 =======")
+    # 多系列柱状图示例 - 比较不同身份类型在各组的分布
+    multi_bar_result = mysql_caculator(
+        x_field="jlugroup",  # X轴字段名 - 组别
+        y_field=["ID", "totaltime"],  # 多个Y轴字段 - 计数和总时间
+        x_table="Data",  # X轴字段所在的表名
+        y_table=["Data", "sign_person"],  # Y轴字段所在的表名
+        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+        x_start_index="南湖校区",  # X表索引字段的起始值
+        x_end_index="南湖校区",  # X表索引字段的结束值
+        y_index_field=["identity", "identity"],  # Y表的索引/过滤字段 - 根据身份筛选
+        y_start_index=["正式队员", "正式队员"],  # Y表索引字段的起始值
+        y_end_index=["正式队员", "正式队员"],  # Y表索引字段的结束值
+        chart_type="bar"  # 图表类型 - 生成柱状图
+    )
+    print(multi_bar_result)
+
+    print("\n======= 测试3: 多系列折线图 =======")
+    # 多系列折线图示例 - 比较不同组别的签到情况随时间变化
+    multi_line_result = mysql_caculator(
+        x_field="lasttime",  # X轴字段名 - 最后一次时间
+        y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时间
+        x_table="sign_daytask",  # X轴字段所在的表名
+        y_table="sign_daytask",  # Y轴字段所在的表名
+        y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+        y_start_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+        y_end_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+        chart_type="line"  # 图表类型 - 生成折线图
+    )
+    print(multi_line_result)
+
+    print("\n======= 测试4: 饼图 =======")
+    # 饼图示例 - 分析不同组别的人数占比
+    pie_result = mysql_caculator(
+        x_field="jlugroup",  # X轴字段名 - 组别 (作为饼图的类别)
+        y_field="ID",  # Y轴字段名 - 使用ID进行计数 (作为饼图的值)
+        x_table="Data",  # X轴字段所在的表名
+        y_table="Data",  # Y轴字段所在的表名
+        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+        x_start_index="南湖校区",  # X表索引字段的起始值
+        x_end_index="南湖校区",  # X表索引字段的结束值
+        chart_type="pie"  # 图表类型 - 生成饼图
+    )
+    print(pie_result)
+
+    print("\n======= 测试5: 多系列散点图 =======")
+    # 多系列散点图示例 - 比较不同组别的签到时间和总时长的关系
+    scatter_result = mysql_caculator(
+        x_field="signin",  # X轴字段名 - 签到时间
+        y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时长
+        x_table="sign_daytask",  # X轴字段所在的表名
+        y_table="sign_daytask",  # Y轴字段所在的表名
+        y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+        y_start_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
+        y_end_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
+        chart_type="scatter"  # 图表类型 - 生成散点图
+    )
+    print(scatter_result)

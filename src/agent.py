@@ -17,7 +17,7 @@ import re
 
 
 # TODO:
-#  f(A,B)及多变量
+#  雷达图及f(A,B)
 #  提示词和SSE
 #  mcp
 #  多数据库
@@ -36,10 +36,6 @@ else:
     base_dir = Path(__file__).resolve().parent.parent
 
 env_path = base_dir / ".env"
-
-# # 先清除可能存在的环境变量
-# if 'OPENAI_API_KEY' in os.environ:
-#     logger.info(f"发现现有的OPENAI_API_KEY环境变量: {os.environ['OPENAI_API_KEY'][:5]}...")
 
 # 现在加载.env文件
 
@@ -182,19 +178,24 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         
         **以下是专门用于mysql的计算的**
         mysql_caculator(
-            x_field: str,                     # X轴字段名
-            y_field: str,                     # Y轴字段名
-            x_table: str,                     # X轴字段所在的表名
-            y_table: str,                     # Y轴字段所在的表名
-            x_index_field: Optional[str],  # X表的索引/过滤字段
-            x_start_index: Optional[str],  # X表索引字段的起始值
-            x_end_index: Optional[str],    # X表索引字段的结束值
-            y_index_field: Optional[str],  # Y表的索引/过滤字段
-            y_start_index: Optional[str],  # Y表索引字段的起始值
-            y_end_index: Optional[str],    # Y表索引字段的结束值
-            chart_type: str = "bar",          # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap": 热力图,"ranking": 排名分析
-            limit: int = 5,                   # 排名分析时返回的最大数量，默认为5
-            ascending: bool = False           # 排序方向，True为升序，False为降序
+            x_field: str,                                      # X轴字段名
+            y_field: Union[str, List[str]],                    # Y轴字段名或字段名列表(多序列)
+            x_table: str,                                      # X轴字段所在的表名
+            y_table: Union[str, List[str]],                    # Y轴字段所在的表名或表名列表(多序列)
+            x_index_field: Optional[str] = None,               # X表的索引/过滤字段
+            x_start_index: Optional[str] = None,               # X表索引字段的起始值
+            x_end_index: Optional[str] = None,                 # X表索引字段的结束值
+            y_index_field: Optional[Union[str, List[str]]] = None,  # Y表的索引/过滤字段或字段列表(多序列)
+            y_start_index: Optional[Union[str, List[str]]] = None,  # Y表索引字段的起始值或值列表(多序列)
+            y_end_index: Optional[Union[str, List[str]]] = None,    # Y表索引字段的结束值或值列表(多序列)
+            chart_type: str = "bar",                           # 图表类型:"bar":条形图,"line":折线图,"pie":饼图,"scatter":散点图,"heatmap":热力图,"ranking":排名分析
+            limit: int = 5,                                    # 排名分析时返回的最大数量，默认为5
+            ascending: bool = False,                           # 排序方向，True为升序，False为降序
+            series_field: Optional[str] = None,                # 多序列图表的序列分组字段
+            z_field: Optional[str] = None,                     # 3D散点图的Z轴字段
+            color_field: Optional[str] = None,                 # 3D散点图的颜色分组字段
+            value_fields: Optional[List[str]] = None,          # 雷达图的多维度指标
+            entity_field: Optional[str] = None                 # 雷达图的实体分组字段
         ) -> str
         **可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb**
 
