@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="0000">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mysql_caculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/mysql_caculator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -98,7 +100,7 @@
       <recent name="D:\pythonProject\agent" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.main">
+  <component name="RunManager" selected="JavaScript 调试.xref-SwarmAgent.html">
     <configuration name="xref-SwarmAgent.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/main.go/build/SwarmAgent/xref-SwarmAgent.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
@@ -243,15 +245,8 @@
       <workItem from="1744536511942" duration="61309000" />
       <workItem from="1745217690562" duration="12262000" />
       <workItem from="1745298375925" duration="14217000" />
-      <workItem from="1745394927632" duration="5759000" />
-    </task>
-    <task id="LOCAL-00002" summary="first commmit">
-      <option name="closed" value="true" />
-      <created>1742306263249</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1742306263249</updated>
+      <workItem from="1745394927632" duration="11610000" />
+      <workItem from="1745479419836" duration="1780000" />
     </task>
     <task id="LOCAL-00003" summary="init demo">
       <option name="closed" value="true" />
@@ -637,7 +632,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745412725658</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="0000">
+      <option name="closed" value="true" />
+      <created>1745416359833</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1745416359833</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -782,7 +785,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>234</line>
+          <line>235</line>
           <option name="timeStamp" value="23" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -807,37 +810,37 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>292</line>
+          <line>293</line>
           <option name="timeStamp" value="32" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>349</line>
+          <line>350</line>
           <option name="timeStamp" value="33" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>348</line>
+          <line>349</line>
           <option name="timeStamp" value="34" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>351</line>
+          <line>352</line>
           <option name="timeStamp" value="35" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>350</line>
+          <line>351</line>
           <option name="timeStamp" value="36" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/agent.py</url>
-          <line>229</line>
+          <line>230</line>
           <option name="timeStamp" value="39" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/mysql_caculator.py</url>
-          <line>780</line>
+          <line>1326</line>
           <option name="timeStamp" value="40" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -990,7 +993,7 @@
     <SUITE FILE_PATH="coverage/main_go$ppppp.coverage" NAME="ppppp 覆盖结果" MODIFIED="1743860424704" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$db_query.coverage" NAME="db_query 覆盖结果" MODIFIED="1744519170219" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/main_go$aaa.coverage" NAME="aaa 覆盖结果" MODIFIED="1744517334621" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/data" />
-    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1745395077919" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/main_go$main.coverage" NAME="main 覆盖结果" MODIFIED="1745421133558" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/agent$hallo.coverage" NAME="hallo 覆盖结果" MODIFIED="1742267787670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$mongodb_generator.coverage" NAME="mongodb_generator 覆盖结果" MODIFIED="1743091689234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
     <SUITE FILE_PATH="coverage/main_go$mysql_generator.coverage" NAME="mysql_generator 覆盖结果" MODIFIED="1744429210809" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/sample" />
@@ -1001,7 +1004,7 @@
     <SUITE FILE_PATH="coverage/main_go$aaaaaa.coverage" NAME="aaaaaa 覆盖结果" MODIFIED="1743064569635" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/text" />
     <SUITE FILE_PATH="coverage/main_go$build_exe.coverage" NAME="build_exe 覆盖结果" MODIFIED="1744040168555" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$aaaaaaaaaa.coverage" NAME="aaaaaaaaaa 覆盖结果" MODIFIED="1744034661821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/main_go$mysql_caculator.coverage" NAME="mysql_caculator 覆盖结果" MODIFIED="1745322965172" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/main_go$mysql_caculator.coverage" NAME="mysql_caculator 覆盖结果" MODIFIED="1745418077956" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/main_go$.coverage" NAME=" 覆盖结果" MODIFIED="1742546072550" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$db_structure.coverage" NAME="db_structure 覆盖结果" MODIFIED="1743085230317" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/agent$agent_manager.coverage" NAME="agent_manager 覆盖结果" MODIFIED="1742294075004" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -1013,7 +1016,7 @@
     <SUITE FILE_PATH="coverage/main_go$model_download.coverage" NAME="model_download 覆盖结果" MODIFIED="1744080284997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$condense.coverage" NAME="condense 覆盖结果" MODIFIED="1743092197868" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/main_go$csdvsdv.coverage" NAME="csdvsdv 覆盖结果" MODIFIED="1744575248876" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/asset" />
-    <SUITE FILE_PATH="coverage/main_go$agent.coverage" NAME="agent 覆盖结果" MODIFIED="1745323373585" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/main_go$agent.coverage" NAME="agent 覆盖结果" MODIFIED="1745421128715" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/main_go$py.coverage" NAME="py 覆盖结果" MODIFIED="1743829783702" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/main_go$caculator.coverage" NAME="caculator 覆盖结果" MODIFIED="1744569499417" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/main_go$test.coverage" NAME="test 覆盖结果" MODIFIED="1744508568700" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/asset" />
