@@ -3,6 +3,8 @@ import os
 from datetime import datetime, date
 import numpy as np
 from typing import Dict, List, Any, Union, Optional, Tuple
+# 在现有导入语句下方添加
+from src.derived_variable_calculator import DerivedVariableCalculator  # 导入衍生变量计算器
 
 from utils import (
     connect_to_mysql,
@@ -33,6 +35,7 @@ def mysql_caculator(
         ascending: bool = False,
         # 其他参数
         series_field: Optional[str] = None,
+        derived_expression: Optional[str] = None
 ) -> str:
     """
     根据配置连接MySQL数据库，查询指定范围(可选)数据，并根据图表类型进行计算
@@ -52,17 +55,22 @@ def mysql_caculator(
     - chart_type: 图表类型
     - limit: 排名分析时返回的最大数量，默认为5
     - ascending: 排序方向，True为升序，False为降序
-    - 其他参数
+    - series_field: 系列字段
+    - derived_expression: 衍生变量表达式，格式如 "new_field = field1 + field2"
 
     返回:
     - JSON格式的计算结果
     """
 
     # 记录日志
+    # 记录日志
     logger.info(
         f"开始查询MySQL数据: X表={x_table}, X字段={x_field}, Y表={y_table}, Y字段={y_field}, "
         f"图表类型: {chart_type}"
     )
+    # 新增日志记录
+    if derived_expression:
+        logger.info(f"使用衍生变量表达式: {derived_expression}")
 
     try:
         # 加载数据库配置
@@ -154,6 +162,42 @@ def mysql_caculator(
                     item['_series_table'] = y_tables[i]
 
                 all_data.extend(series_data)
+            if derived_expression:
+                calculator = DerivedVariableCalculator()
+                all_data, derived_y_field = calculator.transform_y_data(all_data, y_fields, derived_expression)
+                # 使用衍生变量替换原始y_fields
+                if derived_y_field:
+                    # 将多系列转为单系列（衍生变量）
+                    y_fields = [derived_y_field]
+
+                    # 更新图表类型为单系列版本（如果是多系列特定类型）
+                    if chart_type.lower() == "multi_series_bar":
+                        chart_type = "bar"
+                    elif chart_type.lower() == "multi_series_line":
+                        chart_type = "line"
+
+                    # 标记不再是多系列图表
+                    is_multi_series_chart = False
+
+                # 更新数据项中的_series_field
+                for item in all_data:
+                    item['_series_field'] = derived_y_field
+
+                # 创建新的series_data列表，包含一个系列（衍生变量）
+                series_data = []
+                for item in all_data:
+                    if x_field in item and derived_y_field in item:
+                        series_item = {
+                            x_field: item[x_field],
+                            derived_y_field: item[derived_y_field],
+                            "_series_index": 0,
+                        "_series_field": derived_y_field,
+                        "_series_table": y_tables[0] if y_tables else ""
+                        }
+                        series_data.append(series_item)
+
+                # 替换all_data
+                all_data = series_data
 
             # 创建计算器
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
@@ -221,16 +265,18 @@ def mysql_caculator(
                     calculation_result = {
                         "chart_type": "bar",
                         "xAxisData": x_values,
-                        "series": series_data,
+                        "barData": [[v if v is not None else 0 for v in item["data"]] for item in series_data],
+                        "seriesName":[item["name"] for item in series_data],
                         "title": f"{x_table}.{x_field} - 多系列分析"
                     }
                 elif chart_type.lower() == "line":
                     calculation_result = {
                         "chart_type": "line",
-                        "xAxisLabels": x_values,
-                        "series": series_data,
+                        # "xAxisLabels": x_values,
+                        "data": [[v if v is not None else 0 for v in item["data"]] for item in series_data],
                         "title": f"{x_table}.{x_field} - 多系列趋势"
                     }
+                    logger.info(f"计算结果: {calculation_result}")
                 elif chart_type.lower() == "scatter":
                     # 散点图的处理略有不同
                     scatter_series = []
@@ -296,6 +342,14 @@ def mysql_caculator(
                 primary_y_index_field, primary_y_start_index, primary_y_end_index
             )
 
+            derived_y_field = None
+            if derived_expression and data:
+                calculator = DerivedVariableCalculator()
+                data, derived_y_field = calculator.transform_y_data(data, [primary_y_field], derived_expression)
+                if derived_y_field:
+                    # 使用衍生变量替换原始y字段
+                    primary_y_field = derived_y_field
+
             # 根据图表类型执行计算
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
 
@@ -331,6 +385,8 @@ def mysql_caculator(
         connection.close()
         logger.info("数据库连接已关闭")
 
+        logger.info(f"查询结果: {calculation_result}")
+
         # 构建结果
         result = {
             "chart_type": chart_type,
@@ -355,8 +411,13 @@ def mysql_caculator(
             "result": calculation_result
         }
 
+        if derived_expression:
+            result["derived_expression"] = derived_expression
+            if 'derived_y_field' in locals():
+                result["derived_y_field"] = derived_y_field
+
         # 如果是多系列图表，添加系列信息
-        if is_multi_series_chart and isinstance(y_field, list) and len(y_field) > 0:
+        elif is_multi_series_chart and isinstance(y_field, list) and len(y_field) > 0:
             result["series_count"] = len(y_field)
             result["series_info"] = [
                 {
@@ -379,78 +440,107 @@ def mysql_caculator(
 
 
 if __name__ == "__main__":
-    print("======= 测试1: 单系列柱状图 =======")
-    # 柱状图示例 - 分析不同组别的人数
-    result = mysql_caculator(
-        x_field="jlugroup",  # X轴字段名 - 组别
-        y_field="ID",  # Y轴字段名 - 使用ID进行计数
-        x_table="Data",  # X轴字段所在的表名
-        y_table="Data",  # Y轴字段所在的表名
-        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
-        x_start_index="南湖校区",  # X表索引字段的起始值
-        x_end_index="南湖校区",  # X表索引字段的结束值
-        y_index_field="identity",  # Y表的索引/过滤字段 - 根据身份筛选
-        y_start_index="正式队员",  # Y表索引字段的起始值
-        y_end_index="正式队员",  # Y表索引字段的结束值
-        chart_type="bar"  # 图表类型 - 生成柱状图
-    )
-    print(result)
+    # print("======= 测试1: 单系列柱状图 =======")
+    # # 柱状图示例 - 分析不同组别的人数
+    # result = mysql_caculator(
+    #     x_field="jlugroup",  # X轴字段名 - 组别
+    #     y_field="ID",  # Y轴字段名 - 使用ID进行计数
+    #     x_table="Data",  # X轴字段所在的表名
+    #     y_table="Data",  # Y轴字段所在的表名
+    #     x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+    #     x_start_index="南湖校区",  # X表索引字段的起始值
+    #     x_end_index="南湖校区",  # X表索引字段的结束值
+    #     y_index_field="identity",  # Y表的索引/过滤字段 - 根据身份筛选
+    #     y_start_index="正式队员",  # Y表索引字段的起始值
+    #     y_end_index="正式队员",  # Y表索引字段的结束值
+    #     chart_type="bar"  # 图表类型 - 生成柱状图
+    # )
+    # print(result)
+    #
+    # print("\n======= 测试2: 多系列柱状图 =======")
+    # # 多系列柱状图示例 - 比较不同身份类型在各组的分布
+    # multi_bar_result = mysql_caculator(
+    #     x_field="jlugroup",  # X轴字段名 - 组别
+    #     y_field=["ID", "totaltime"],  # 多个Y轴字段 - 计数和总时间
+    #     x_table="Data",  # X轴字段所在的表名
+    #     y_table=["Data", "sign_person"],  # Y轴字段所在的表名
+    #     x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+    #     x_start_index="南湖校区",  # X表索引字段的起始值
+    #     x_end_index="南湖校区",  # X表索引字段的结束值
+    #     y_index_field=["identity", "identity"],  # Y表的索引/过滤字段 - 根据身份筛选
+    #     y_start_index=["正式队员", "正式队员"],  # Y表索引字段的起始值
+    #     y_end_index=["正式队员", "正式队员"],  # Y表索引字段的结束值
+    #     chart_type="bar"  # 图表类型 - 生成柱状图
+    # )
+    # print(multi_bar_result)
 
-    print("\n======= 测试2: 多系列柱状图 =======")
-    # 多系列柱状图示例 - 比较不同身份类型在各组的分布
-    multi_bar_result = mysql_caculator(
-        x_field="jlugroup",  # X轴字段名 - 组别
-        y_field=["ID", "totaltime"],  # 多个Y轴字段 - 计数和总时间
-        x_table="Data",  # X轴字段所在的表名
-        y_table=["Data", "sign_person"],  # Y轴字段所在的表名
-        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
-        x_start_index="南湖校区",  # X表索引字段的起始值
-        x_end_index="南湖校区",  # X表索引字段的结束值
-        y_index_field=["identity", "identity"],  # Y表的索引/过滤字段 - 根据身份筛选
-        y_start_index=["正式队员", "正式队员"],  # Y表索引字段的起始值
-        y_end_index=["正式队员", "正式队员"],  # Y表索引字段的结束值
-        chart_type="bar"  # 图表类型 - 生成柱状图
-    )
-    print(multi_bar_result)
+    # print("\n======= 测试3: 多系列折线图 =======")
+    # # 多系列折线图示例 - 比较不同组别的签到情况随时间变化
+    # multi_line_result = mysql_caculator(
+    #     x_field="lasttime",  # X轴字段名 - 最后一次时间
+    #     y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时间
+    #     x_table="sign_daytask",  # X轴字段所在的表名
+    #     y_table="sign_daytask",  # Y轴字段所在的表名
+    #     y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+    #     y_start_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+    #     y_end_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+    #     chart_type="bar",  # 图表类型 - 生成折线图
+    #     derived_expression = "combined_time = totaltime + totaltime"  # 衍生变量表达式 - 两组的totaltime相加
+    #
+    # )
+    # print(multi_line_result)
+    #
+    # print("\n======= 测试3: 多系列折线图 =======")
+    # # 多系列折线图示例 - 比较不同组别的签到情况随时间变化
+    # multi_line_result = mysql_caculator(
+    #     x_field="lasttime",  # X轴字段名 - 最后一次时间
+    #     y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时间
+    #     x_table="sign_daytask",  # X轴字段所在的表名
+    #     y_table="sign_daytask",  # Y轴字段所在的表名
+    #     y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+    #     y_start_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+    #     y_end_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+    #     chart_type="bar",  # 图表类型 - 生成折线图
+    #
+    # )
+    # print(multi_line_result)
 
-    print("\n======= 测试3: 多系列折线图 =======")
-    # 多系列折线图示例 - 比较不同组别的签到情况随时间变化
     multi_line_result = mysql_caculator(
-        x_field="lasttime",  # X轴字段名 - 最后一次时间
-        y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时间
-        x_table="sign_daytask",  # X轴字段所在的表名
-        y_table="sign_daytask",  # Y轴字段所在的表名
-        y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
-        y_start_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
-        y_end_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
-        chart_type="line"  # 图表类型 - 生成折线图
+        x_field="quantity",  # X轴字段名 - 采购数量
+        y_field="price",  # Y轴字段 - 单价
+        x_table="Financial_Log",  # X轴字段所在的表名
+        y_table="Financial_Log",  # Y轴字段所在的表名
+        y_index_field="ID",  # 用唯一标识字段（如ID）避免分组
+        y_start_index="",  # 无需筛选范围
+        y_end_index="",  # 无需筛选范围
+        chart_type="line",  # 图表类型 - 折线图
     )
     print(multi_line_result)
 
-    print("\n======= 测试4: 饼图 =======")
-    # 饼图示例 - 分析不同组别的人数占比
-    pie_result = mysql_caculator(
-        x_field="jlugroup",  # X轴字段名 - 组别 (作为饼图的类别)
-        y_field="ID",  # Y轴字段名 - 使用ID进行计数 (作为饼图的值)
-        x_table="Data",  # X轴字段所在的表名
-        y_table="Data",  # Y轴字段所在的表名
-        x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
-        x_start_index="南湖校区",  # X表索引字段的起始值
-        x_end_index="南湖校区",  # X表索引字段的结束值
-        chart_type="pie"  # 图表类型 - 生成饼图
-    )
-    print(pie_result)
-
-    print("\n======= 测试5: 多系列散点图 =======")
-    # 多系列散点图示例 - 比较不同组别的签到时间和总时长的关系
-    scatter_result = mysql_caculator(
-        x_field="signin",  # X轴字段名 - 签到时间
-        y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时长
-        x_table="sign_daytask",  # X轴字段所在的表名
-        y_table="sign_daytask",  # Y轴字段所在的表名
-        y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
-        y_start_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
-        y_end_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
-        chart_type="scatter"  # 图表类型 - 生成散点图
-    )
-    print(scatter_result)
+    # print("\n======= 测试4: 饼图 =======")
+    # # 饼图示例 - 分析不同组别的人数占比
+    # pie_result = mysql_caculator(
+    #     x_field="jlugroup",  # X轴字段名 - 组别 (作为饼图的类别)
+    #     y_field="ID",  # Y轴字段名 - 使用ID进行计数 (作为饼图的值)
+    #     x_table="Data",  # X轴字段所在的表名
+    #     y_table="Data",  # Y轴字段所在的表名
+    #     x_index_field="school",  # X表的索引/过滤字段 - 根据校区筛选
+    #     x_start_index="南湖校区",  # X表索引字段的起始值
+    #     x_end_index="南湖校区",  # X表索引字段的结束值
+    #     chart_type="pie"  # 图表类型 - 生成饼图
+    # )
+    # print(pie_result)
+    #
+    # print("\n======= 测试5: 多系列散点图 =======")
+    # # 多系列散点图示例 - 比较不同组别的签到时间和总时长的关系
+    # scatter_result = mysql_caculator(
+    #     x_field="signin",  # X轴字段名 - 签到时间
+    #     y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时长
+    #     x_table="sign_daytask",  # X轴字段所在的表名
+    #     y_table="sign_daytask",  # Y轴字段所在的表名
+    #     y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+    #     y_start_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
+    #     y_end_index=["电控组", "AI组"],  # 分别筛选电控组和AI组
+    #     chart_type="scatter"  # 图表类型 - 生成散点图
+    # )
+    # print(scatter_result)

@@ -39,7 +39,7 @@ class BarChartCalculator(ChartCalculator):
                 "chart_type": "bar",
                 "xAxisData": [],
                 "barData": [],
-                "series": [],
+                "seriesNames": [],
                 "statistics": {"mean": 0, "median": 0, "max": 0, "min": 0}
             }
 
@@ -89,11 +89,18 @@ class BarChartCalculator(ChartCalculator):
                         "sum": sum(values)
                     }
 
+            # 修改返回格式：分开barDataandseriesNames
+            barData = []
+            seriesNames = []
+            for series in series_data:
+                barData.append(series["data"])
+                seriesNames.append(series["name"])
+
             result = {
                 "chart_type": "bar",
                 "xAxisData": categories,
-                "series": series_data,
-                "seriesNames": series_values,
+                "barData": barData,
+                "seriesNames": seriesNames,
                 "statistics": statistics,
                 "title": f"{x_table}。{x_field} 按 {series_field} 分组"
             }
@@ -176,11 +183,18 @@ class BarChartCalculator(ChartCalculator):
                             "sum": sum(values)
                         }
 
+                # 修改返回格式：分开barDataandseriesNames
+                barData = []
+                seriesNames = []
+                for series in series_data:
+                    barData.append(series["data"])
+                    seriesNames.append(series["name"])
+
                 result = {
                     "chart_type": "bar",
                     "xAxisData": categories,
-                    "series": series_data,
-                    "seriesNames": [s["name"] for s in series_data],
+                    "barData": barData,
+                    "seriesNames": seriesNames,
                     "statistics": statistics,
                     "title": f"{x_table}.{x_field} 多系列分析"
                 }
@@ -212,20 +226,20 @@ class BarChartCalculator(ChartCalculator):
                     "min": min(values) if values else 0
                 }
 
+
+
+                # 单系列时barData仍然是二维数组,只是只有一个元素
                 result = {
                     "chart_type": "bar",
                     "xAxisData": categories,
-                    "barData": values,
-                    "series": [{
-                        "name": y_field,
-                        "data": values
-                    }],
+                    "barData": [values],
                     "seriesNames": [y_field],
                     "statistics": statistics,
                     "title": f"{x_table}.{x_field} - {y_table}.{y_field} 分析"
                 }
 
         return result
+
 
 
 class LineChartCalculator(ChartCalculator):
@@ -250,7 +264,6 @@ class LineChartCalculator(ChartCalculator):
                 "chart_type": "line",
                 "data": [],
                 "xAxisLabels": [],
-                "series": [],
                 "title": f"{x_field}-{y_field}"
             }
 
@@ -296,8 +309,8 @@ class LineChartCalculator(ChartCalculator):
 
             result = {
                 "chart_type": "line",
+                "data": [series["data"] for series in series_data],
                 "xAxisLabels": x_values,
-                "series": series_data,
                 "title": f"{x_table}.{x_field} 按 {series_field} 分组"
             }
         else:
@@ -371,39 +384,51 @@ class LineChartCalculator(ChartCalculator):
 
                 result = {
                     "chart_type": "line",
+                    "data": [series["data"] for series in series_data],
                     "xAxisLabels": x_values,
-                    "series": series_data,
+                    # "series": series_data,
                     "title": f"{x_table}.{x_field} 多系列趋势"
                 }
             else:
                 # 常规单系列处理
                 # 按日期排序数据
-                sorted_data = sorted(data, key=lambda x: x.get(x_field, ''))
+                try:
+                    data.sort(key=lambda x: float(x.get(x_field, 0) or 0))
+                except Exception:
+                    pass  # 保留原顺序
 
-                # 根据y_field进行时间序列统计
+
+                # 按排序后的顺序收集唯一 x 值，并统计 y
                 date_counts = {}
-                for item in sorted_data:
-                    if x_field in item and y_field in item:
-                        date = str(item.get(x_field, ''))
-                        if date not in date_counts:
-                            date_counts[date] = 0
-                        if isinstance(item[y_field], (int, float)):  # 如果值是数字
-                            date_counts[date] += item[y_field]
-                        else:  # 否则计数
-                            date_counts[date] += 1
+                unique_x_order = []  # 记录排序后去重的 x 顺序
 
-                # 确保按排序后的x_values顺序获取数据
-                time_series = x_values
-                values = [date_counts.get(date, 0) for date in time_series]
+                for item in data:
+                    x_val = str(item.get(x_field, ''))
+                    y_val = item.get(y_field, 0)
+
+                    # 统计逻辑
+                    if x_val not in date_counts:
+                        date_counts[x_val] = 0
+                        unique_x_order.append(x_val)  # 记录首次出现的顺序
+
+                    if isinstance(y_val, (int, float)):
+                        date_counts[x_val] += y_val
+                    else:
+                        date_counts[x_val] += 1
+
+                # 直接使用排序后的唯一 x 顺序
+                x_values = unique_x_order
+                values = [date_counts[x] for x in unique_x_order]
+                logger.info(f"折线图数据计算完成, X轴值: {x_values}, Y轴值: {values}")
 
                 result = {
                     "chart_type": "line",
                     "data": values,
-                    "xAxisLabels": time_series,
-                    "series": [{
-                        "name": y_field,
-                        "data": values
-                    }],
+                    "xAxisLabels": x_values,
+                    # "series": [{
+                    #     "name": y_field,
+                    #     "data": values
+                    # }],
                     "title": f"{x_table}.{x_field} - {y_table}.{y_field}",
                 }
 

@@ -194,6 +194,20 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             series_field: Optional[str] = None,                # 多序列图表的序列分组字段
         ) -> str
         **可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb**
+        如果用户问
+        **请帮我画一个条形图，比较不同最后一次登录时间(lasttime)下的电控组的总时间情况和机械组的总时间情况。
+        X轴：显示最后一次时间(lasttime)，全部数据无索引，
+        Y轴：同时展示两组数据 - 第一组是索引起止都为电控组，第二组是索引起止为机械组；第一组为totaltime，第二组为totaltime，
+        筛选条件：分别筛选电控组和机械组的数据。**
+        那么你必须要传如下参数
+        x_field="lasttime",  # X轴字段名 - 最后一次时间
+        y_field=["totaltime", "totaltime"],  # Y轴字段 - 总时间
+        x_table="sign_daytask",  # X轴字段所在的表名
+        y_table="sign_daytask",  # Y轴字段所在的表名
+        y_index_field=["jlugroup", "jlugroup"],  # Y表的索引/过滤字段 - 按组别筛选
+        y_start_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+        y_end_index=["电控组", "机械组"],  # 分别筛选电控组和机械组
+        chart_type="bar", 
 
 
         query_database函数接受一个字符串
@@ -274,7 +288,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             result_json = result_json["result"]
             logger.info(f"结果: {result_json}")
             del hazuki
-            return f"```{result_json}```"
+            return f"$$$${result_json}$$$$"
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析错误: {e}")
             del hazuki
@@ -336,6 +350,11 @@ def init_agent(
              "结果显示2024年3月的考勤情况，条形图信息如下：出勤23天，迟到3天，缺勤1天，请假3天。可以使用这些数据在Excel等工具中创建饼状图
              ，帮助更直观地了解不同考勤类别所占比例。需要更多帮助请告诉我！"
             因为这样没有提供返回值给用户
+            
+            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
+            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
+            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
+            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
             
         当用户需要知道数据库的基本信息时，请考虑调用函数
         比如”请告诉我数据库信息“
