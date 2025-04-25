@@ -196,15 +196,9 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             color_field: Optional[str] = None,                 # 3D散点图的颜色分组字段
             value_fields: Optional[List[str]] = None,          # 雷达图的多维度指标
             entity_field: Optional[str] = None                 # 雷达图的实体分组字段
-            
-            derived_formula: Optional[str] = None,             # derived_formula: 可选的衍生变量计算公式，例如在y_field为[B,C]时 "B + C" 或 "sqrt(B**2 + C**2)"
-            derived_output_field: str = "derived_y",           # derived_output_field: 衍生变量输出字段名，默认为 "derived_y"
-
         ) -> str
         **可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb**
-        **每次调用时，务必注意是否有衍生变量**
-        **每次调用时，务必注意是否有衍生变量**
-        **每次调用时，务必注意是否有衍生变量**
+
 
         query_database函数接受一个字符串
         这个字符串非常非常非常重要，是一条mysql指令
