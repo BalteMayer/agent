@@ -73,27 +73,30 @@ class DerivedVariableCalculator:
         var_env = {}
 
         # 检查并添加数据，对于不存在的字段默认为0
+        # 检查并添加数据，确保更严格地处理空值
         for var_name in self.variable_names:
-            if var_name in data and data[var_name] is not None:
-                # 处理各种空值情况
+            # 默认值为0
+            var_env[var_name] = 0
+
+            if var_name in data:
                 value = data[var_name]
-                if value == "" or (isinstance(value, (float,int)) and (value == 0)):
-                    var_env[var_name] = 0
-                else:
-                    # 尝试转换为数值类型
-                    try:
-                        if isinstance(value, (int, float)):
-                            var_env[var_name] = value
-                        else:
-                            # 尝试转换非数值类型
-                            converted = float(value)
-                            var_env[var_name] = converted
-                    except (ValueError, TypeError):
-                        # 无法转换为数值的情况，设为0
-                        var_env[var_name] = 0
-            else:
-                # 字段不存在或为None，设为0
-                var_env[var_name] = 0
+                # 如果值存在且不是None
+                if value is not None:
+                    # 空字符串处理为0
+                    if value == "":
+                        continue  # 使用默认的0
+
+                    # 已经是数值类型
+                    if isinstance(value, (int, float)):
+                        var_env[var_name] = value
+                    else:
+                        # 尝试转换为数值
+                        try:
+                            var_env[var_name] = float(value)
+                        except (ValueError, TypeError):
+                            # 无法转换，保持默认的0
+                            print(f"警告: 字段 '{var_name}' 的值 '{value}' 无法转换为数值")
+                            # 已经设置为0，不需要额外操作
 
         # 添加常用数学函数
         math_funcs = {name: getattr(math, name) for name in dir(math) if callable(getattr(math, name))}

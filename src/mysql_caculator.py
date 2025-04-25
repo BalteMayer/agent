@@ -1141,6 +1141,33 @@ def get_date_field(connection, table_name):
             cursor.close()
 
 
+def _sanitize_data(data_list):
+    """处理从数据库获取的数据中的空字符串"""
+    if not data_list:
+        return data_list
+
+    result = []
+    for item in data_list:
+        sanitized_item = {}
+        for key, value in item.items():
+            if value == "":
+                sanitized_item[key] = None
+            else:
+                sanitized_item[key] = value
+        result.append(sanitized_item)
+    return result
+
+
+def _safe_convert_to_number(value, default=0):
+    """安全地将值转换为数字，处理异常情况"""
+    if value is None or value == "":
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
                            x_index_field=None, x_start_index=None, x_end_index=None,
                            y_index_field=None, y_start_index=None, y_end_index=None):
@@ -1296,10 +1323,10 @@ def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
                     y_params.append(y_end_index)
 
                 cursor.execute(x_query, x_params)
-                x_data = cursor.fetchall()
+                x_data = _sanitize_data(cursor.fetchall())
 
                 cursor.execute(y_query, y_params)
-                y_data = cursor.fetchall()
+                y_data = _sanitize_data(cursor.fetchall())
 
                 # 合并数据 - 创建笛卡尔积
                 combined_data = []
@@ -1309,15 +1336,25 @@ def query_data_from_tables(connection, x_table, y_table, x_field, y_field,
                         merged_item.update(x_item)
                         # 避免字段名冲突
                         for k, v in y_item.items():
-                            if k in merged_item and k != y_field:
-                                merged_item[f"{y_table}_{k}"] = v
+                            # 特殊处理totaltime等可能为空的字段
+                            if k == 'totaltime' and (v is None or v == ""):
+                                safe_value = None
                             else:
-                                merged_item[k] = v
+                                safe_value = v
+
+                            if k in merged_item and k != y_field:
+                                merged_item[f"{y_table}_{k}"] = safe_value
+                            else:
+                                merged_item[k] = safe_value
                         combined_data.append(merged_item)
 
                 return combined_data
     except Exception as e:
-        logger.error(f"查询数据时出错: {e}")
+        logger.error(f"查询数据时出错类型: {type(e).__name__}, 详细信息: {e}")
+        if 'x_query' in locals() and 'x_params' in locals():
+            logger.error(f"X查询: {x_query}, 参数: {x_params}")
+        if 'y_query' in locals() and 'y_params' in locals():
+            logger.error(f"Y查询: {y_query}, 参数: {y_params}")
         return []
     finally:
         if cursor:
@@ -1638,7 +1675,6 @@ def mysql_caculator(
                 primary_y_index_field, primary_y_start_index, primary_y_end_index
             )
 
-            logger.info(x_table,x_field,y_table,y_field)
 
             # 确保查询结果是列表类型
             if not isinstance(data, list):
