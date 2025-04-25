@@ -67,7 +67,7 @@ def mysql_caculator(
     try:
         # 加载数据库配置
         db_info = load_db_config()
-        logger.info(f"数据库配置: {db_info}")
+        # logger.info(f"数据库配置: {db_info[:15]}")
 
         # 确保使用MySQL配置
         if "mysql" in db_info:
