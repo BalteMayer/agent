@@ -33,10 +33,6 @@ def mysql_caculator(
         ascending: bool = False,
         # 其他参数
         series_field: Optional[str] = None,
-        z_field: Optional[str] = None,
-        color_field: Optional[str] = None,
-        value_fields: Optional[List[str]] = None,
-        entity_field: Optional[str] = None
 ) -> str:
     """
     根据配置连接MySQL数据库，查询指定范围(可选)数据，并根据图表类型进行计算
@@ -303,26 +299,26 @@ def mysql_caculator(
             # 根据图表类型执行计算
             calculator = ChartCalculatorFactory.create_calculator(chart_type)
 
-            if chart_type.lower() == "3d_scatter":
-                if not z_field:
-                    return json.dumps({"error": "3D散点图需要指定z_field参数"}, ensure_ascii=False)
-
-                if color_field:
-                    calculation_result = calculator.calculate(
-                        data, x_field, primary_y_field, z_field, x_table, primary_y_table, color_field
-                    )
-                else:
-                    calculation_result = calculator.calculate(
-                        data, x_field, primary_y_field, z_field, x_table, primary_y_table
-                    )
-            elif chart_type.lower() == "radar":
-                if not value_fields or len(value_fields) < 3:
-                    return json.dumps({"error": "雷达图需要至少3个value_fields参数"}, ensure_ascii=False)
-
-                calculation_result = calculator.calculate(
-                    data, x_field, value_fields, entity_field
-                )
-            elif chart_type.lower() == "ranking":
+            # if chart_type.lower() == "3d_scatter":
+            #     if not z_field:
+            #         return json.dumps({"error": "3D散点图需要指定z_field参数"}, ensure_ascii=False)
+            #
+            #     if color_field:
+            #         calculation_result = calculator.calculate(
+            #             data, x_field, primary_y_field, z_field, x_table, primary_y_table, color_field
+            #         )
+            #     else:
+            #         calculation_result = calculator.calculate(
+            #             data, x_field, primary_y_field, z_field, x_table, primary_y_table
+            #         )
+            # elif chart_type.lower() == "radar":
+            #     if not value_fields or len(value_fields) < 3:
+            #         return json.dumps({"error": "雷达图需要至少3个value_fields参数"}, ensure_ascii=False)
+            #
+            #     calculation_result = calculator.calculate(
+            #         data, x_field, value_fields, entity_field
+            #     )
+            if chart_type.lower() == "ranking":
                 calculation_result = calculator.calculate(
                     data, x_field, primary_y_field, x_table, primary_y_table, limit, ascending
                 )

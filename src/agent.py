@@ -192,10 +192,6 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             limit: int = 5,                                    # 排名分析时返回的最大数量，默认为5
             ascending: bool = False,                           # 排序方向，True为升序，False为降序
             series_field: Optional[str] = None,                # 多序列图表的序列分组字段
-            z_field: Optional[str] = None,                     # 3D散点图的Z轴字段
-            color_field: Optional[str] = None,                 # 3D散点图的颜色分组字段
-            value_fields: Optional[List[str]] = None,          # 雷达图的多维度指标
-            entity_field: Optional[str] = None                 # 雷达图的实体分组字段
         ) -> str
         **可以知道，这是专门用于mysql的计算的，而mongodb_caculator用于mongodb**
 
