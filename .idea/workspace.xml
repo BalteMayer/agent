@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="0000">
-      <change afterPath="$PROJECT_DIR$/src/derived_variable_calculator.py" afterDir="false" />
+    <list default="true" id="b0a792c7-eb72-4a18-9125-8b98bd92adfb" name="更改" comment="derived unfinished">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/chart_caculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/chart_caculator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mysql_caculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/mysql_caculator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -247,15 +243,7 @@
       <workItem from="1745479419836" duration="7333000" />
       <workItem from="1745558722426" duration="753000" />
       <workItem from="1745559490912" duration="12400000" />
-      <workItem from="1745596111495" duration="14280000" />
-    </task>
-    <task id="LOCAL-00011" summary="graph 2.1 -No ENG">
-      <option name="closed" value="true" />
-      <created>1742719237921</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1742719237921</updated>
+      <workItem from="1745596111495" duration="16777000" />
     </task>
     <task id="LOCAL-00012" summary="db">
       <option name="closed" value="true" />
@@ -641,7 +629,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745571301252</updated>
     </task>
-    <option name="localTasksCounter" value="60" />
+    <task id="LOCAL-00060" summary="derived unfinished">
+      <option name="closed" value="true" />
+      <created>1745617580579</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1745617580579</updated>
+    </task>
+    <option name="localTasksCounter" value="61" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -660,7 +656,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CHECK_NEW_TODO" value="false" />
-    <MESSAGE value="graph 2.1 -No ENG" />
     <MESSAGE value="db" />
     <MESSAGE value="chart demo" />
     <MESSAGE value="daul agency" />
@@ -685,7 +680,8 @@
     <MESSAGE value="query shazhibi&#10;reademe error code" />
     <MESSAGE value="chart inteference" />
     <MESSAGE value="0000" />
-    <option name="LAST_COMMIT_MESSAGE" value="0000" />
+    <MESSAGE value="derived unfinished" />
+    <option name="LAST_COMMIT_MESSAGE" value="derived unfinished" />
   </component>
   <component name="VgoProject">
     <integration-enabled>false</integration-enabled>
