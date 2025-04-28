@@ -7,10 +7,11 @@ from typing import List, Dict, Any, Optional
 
 def connect_to_database(db_info: Dict[str, Any]) -> pymongo.MongoClient:
     """连接到MongoDB数据库"""
+    key = "TokugawaMatsuri"
     host = db_info.get("host", "localhost")
     port = db_info.get("port", 27017)
     username = db_info.get("username", "")
-    password = db_info.get("password", "")
+    password = ''.join(chr(b ^ ord(key[i % len(key)])) for i, b in enumerate(bytes.fromhex(db_info.get('password', ''))))
     database_name = db_info.get("database", "")
 
     connection_string = f"mongodb://"

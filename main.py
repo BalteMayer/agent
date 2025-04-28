@@ -74,8 +74,6 @@ def chat(request: ChatRequest, req: Request):
 
     try:
 
-        combined_id = f"{user_id}_{session_id}"
-
         # 调用聊天处理函数
         response = process_message(
             session_id=session_id,

@@ -10,6 +10,8 @@ import sys
 
 def connect_to_mysql(db_info: Dict[str, Any]) -> pymysql.connections.Connection:
     """连接到MySQL数据库"""
+    key = "TokugawaMatsuri"
+
     # 检查是否有mysql专用配置
     if "mysql" in db_info:
         mysql_info = db_info["mysql"]
@@ -19,7 +21,8 @@ def connect_to_mysql(db_info: Dict[str, Any]) -> pymysql.connections.Connection:
     host = mysql_info.get("host", "localhost")
     port = mysql_info.get("port", 3306)
     username = mysql_info.get("username", "")
-    password = mysql_info.get("password", "")
+    password = ''.join(chr(b ^ ord(key[i % len(key)])) for i, b in enumerate(bytes.fromhex(mysql_info.get("password", ""))))
+    logger.info(f"mysql密码: {password}")
     database_name = mysql_info.get("database", "")
 
     try:

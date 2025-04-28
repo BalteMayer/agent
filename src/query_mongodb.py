@@ -48,8 +48,9 @@ class MongoDBExecutor:
         """
         try:
             # 构建MongoDB连接URI
+            key = "TokugawaMatsuri"
             username = self.config.get('username', '')
-            password = self.config.get('password', '')
+            password = ''.join(chr(b ^ ord(key[i % len(key)])) for i, b in enumerate(bytes.fromhex(self.config.get('password', ''))))
             host = self.config.get('host', 'localhost')
             port = self.config.get('port', 27017)
             # 构建连接URI

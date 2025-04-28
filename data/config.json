@@ -3,7 +3,7 @@
     "host": "tarsgo.com",
     "port": 3306,
     "username": "tarsgo",
-    "password": "xf210398444@",
+    "password": "2c09594457524e5979554033",
     "database": "tarsgo",
     "tables": {
       "Article": {

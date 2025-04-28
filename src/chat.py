@@ -103,6 +103,8 @@ def process_message(session_id, user_message, stream=True, user_id="anonymous"):
         # 获取更新后的消息列表
         updated_messages = memory_manager.get_messages(combined_id)
 
+        logger.info(f"{updated_messages}")
+
         # 返回当前会话的完整消息历史
         return {
             "response": updated_messages,

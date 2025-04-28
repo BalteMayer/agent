@@ -14,13 +14,8 @@ import os
 import sys
 from pathlib import Path
 import re
+import datetime
 
-
-# TODO:
-#  雷达图及f(A,B)
-#  提示词和SSE
-#  mcp
-#  多数据库
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -92,15 +87,24 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
         instructions=
         """
         你是一个数据查询和分析助手,你每次都请务必根据message里的信息判断是mysql还是mongodb，然后
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-                **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        **如果用户需要查询时，你就调用query_database函数，获取数据**
-        
+
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+        **如果用户需要'查询'时，你就调用query_database函数，获取数据，禁止caculator**
+
         
         如果用户需要数据分析
         
@@ -269,6 +273,9 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             result_str = result_str.replace("None", "null").replace('None', 'null')
             result_str = "["+result_str+"]"
             result_str = result_str.replace("'", '"')
+            result_str = result_str.replace("undefined", "null")
+            result_str = re.sub(r"datetime\.datetime\(([^)]+)\)",lambda m: f'"{datetime.datetime(*map(int, m.group(1).split(", "))).isoformat()}"',result_str)
+
             logger.info(f"结果: {result_str}")
             result_json = json.loads(result_str)
 
@@ -276,7 +283,7 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             # logger.info(f"结果: {result_json}")
 
             del hazuki
-            return f"[{result_json}]"
+            return f"&&&&{result_json}&&&&"
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析错误: {e}")
             del hazuki
@@ -295,6 +302,8 @@ def transmit_refined_params_and_db_info(time_info: str, chart_info: str):
             return f"解析错误: {result_str}"
 
 
+
+from src.search_web import search_web
 
 def init_agent(
         model_name: str = 'deepseek-chat',
@@ -353,19 +362,50 @@ def init_agent(
             
             以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
             以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
-            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
-            以及图表计算结果会以$$$${}$$$$这样一种形式，你绝对不能删掉前后的$$$$
+            
+            当用户需要查询数据时，同样是这个函数，但返回值不一样了
+            当用户需要查询数据时，同样是这个函数，但返回值不一样了
+            当用户需要查询数据时，同样是这个函数，但返回值不一样了
+            当用户需要查询数据时，同样是这个函数，但返回值不一样了
+            查询结果会变成&&&&{}&&&&这样的格式，你绝对不能删掉前后的&&&&或者改为$$$$
+            查询结果会变成&&&&{}&&&&这样的格式，你绝对不能删掉前后的&&&&或者改为$$$$
+            查询结果会变成&&&&{}&&&&这样的格式，你绝对不能删掉前后的&&&&或者改为$$$$
+            查询结果会变成&&&&{}&&&&这样的格式，你绝对不能删掉前后的&&&&或者改为$$$$
+
+
             
         当用户需要知道数据库的基本信息时，请考虑调用函数
         比如”请告诉我数据库信息“
         describe_db_info -> str
             这个函数用于获取数据库的基本信息，返回值是一个str类型的描述信息
             你需要根据这个信息把数据库基本信息以更语义化和自然的方式描述给用户
+        
+        ***search_web(query: str) -> str***
+        使用百度搜索API进行搜索，并返回结果。
+        参数:
+            query (str): 搜索关键词。
+        返回:
+            长成%%%%[]%%%%这样的
+            
+            ***请你把返回值原本返回，不要改动***
+            ***请你把返回值原本返回，不要改动***
+            ***保留%%%%[]%%%%格式***
+            ***保留%%%%[]%%%%格式***
+            ***保留%%%%[]%%%%格式***
+            ***本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动***
+            ***本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动***
+            ***本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动***
+            ***本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动***
+            ***本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动******本函数返回值禁止任何改动***
+            ***不允许擅自把内容提取出来变成你自己的结构******不允许擅自把内容提取出来变成你自己的结构******不允许擅自把内容提取出来变成你自己的结构******不允许擅自把内容提取出来变成你自己的结构***
+
+        
         """,
         debug=True,
         functions=[
             transmit_refined_params_and_db_info,
-            describe_db_info
+            describe_db_info,
+            search_web
         ]
     )
 

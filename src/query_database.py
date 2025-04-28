@@ -52,12 +52,13 @@ class DatabaseExecutor:
         """
         连接到MySQL数据库
         """
+        key = "TokugawaMatsuri"
         try:
             self.connection = pymysql.connect(
                 host=self.config.get('host', 'localhost'),
                 port=self.config.get('port', 3306),
                 user=self.config.get('username', 'root'),  # 使用username与配置文件保持一致
-                password=self.config.get('password', ''),
+                password = ''.join(chr(b ^ ord(key[i % len(key)])) for i, b in enumerate(bytes.fromhex(self.config.get('password', '')))),
                 database=self.config.get('database', ''),
                 charset=self.config.get('charset', 'utf8mb4')
             )
